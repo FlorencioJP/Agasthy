@@ -96,7 +96,15 @@ fn full_lab_lifecycle_never_touches_the_original_until_apply() {
 
     let dirs: Vec<_> = std::env::split_paths(&std::env::var_os("PATH").unwrap()).collect();
     let runner = TestRunner {
-        git: SystemCommandRunner::new(&["git"], dirs, vec![String::new()]),
+        git: SystemCommandRunner::new(
+            &["git"],
+            dirs,
+            if cfg!(windows) {
+                vec![".exe".into()]
+            } else {
+                vec![String::new()]
+            },
+        ),
     };
     let store = LabStore::new(root.join("labs")).unwrap();
     let spec = LabSpec {
