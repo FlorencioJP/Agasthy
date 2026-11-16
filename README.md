@@ -45,37 +45,55 @@ A developer machine holds hundreds of moving parts: cloned repositories, several
 | 💬 **Ask your machine** | "What is using my RAM?" · "Free 10 GB safely" · "Which repos haven't I touched in 90 days?" · "What breaks if I remove openssl@3?" Works with no AI model; optionally connect Ollama, LM Studio or a cloud model. |
 | 🧭 **Insights + menu bar** | A ranked list of what needs attention right now (low disk, swap pressure, token spikes, stale data), one click away in the menu bar. |
 
+## Tour
+
+<p align="center"><img src="docs/screenshots/tour.gif" width="900" alt="Tour: Overview insights, Agents, Token Usage, the Operator proposing a cleanup, the review dialog, Machine Graph and Storage" /></p>
+
+| | |
+|---|---|
+| <img src="docs/screenshots/overview.png" alt="Overview with ranked insights" /><br/>**Insights.** What needs attention now, each with one action. | <img src="docs/screenshots/usage.png" alt="Token Usage page" /><br/>**Token Usage.** Tokens and estimated cost by day, project and model. |
+| <img src="docs/screenshots/operator.png" alt="AI Operator answering Clean up after my agents" /><br/>**Ask your machine.** Answers from real data; changes are only proposed. | <img src="docs/screenshots/review.png" alt="Review dialog for stopping three processes" /><br/>**Nothing runs unreviewed.** Every change is a dry run you confirm. |
+| <img src="docs/screenshots/storage.png" alt="Storage and cleanup" /><br/>**Safe cleanup.** Only rebuildable folders Git ignores, into a restorable quarantine. | <img src="docs/screenshots/graph.png" alt="Machine Graph" /><br/>**Machine Graph.** Projects, runtimes and dependencies, and what depends on what. |
+
+<sub>Screenshots use a synthetic demo machine (`pnpm screenshots` regenerates them), not real data.</sub>
+
 ## Built to be trusted
 
-- **Local-first.** Everything stays in one SQLite file on your Mac. No account, no telemetry, no analytics.
-- **Nothing changes without you.** Every action is a dry run first, shows exact targets and sizes, needs your confirmation, is checked afterwards and written to an audit log.
-- **Hard limits.** It never uses `sudo`, never deletes Git repositories or tracked files, never touches Docker volumes, and never stops system or other users' processes. The AI can only *propose* actions; it cannot run commands.
-- **Evidence, not guesses.** Every fact carries its source and a confidence level. Anything it cannot measure is shown as *unavailable*, never as 0.
-- **Light.** About 0.4% CPU and under 100 MB for the app process in normal use; a 13 MB app.
+- **Local-first.** One SQLite file on your machine. No account, no telemetry, no analytics.
+- **Nothing changes without you.** Every action is a dry run first, shows exact targets, needs your confirmation, is verified and logged.
+- **Hard limits.** Never `sudo`. Never deletes Git repositories or tracked files. Never touches Docker volumes. Never stops system processes. The AI can only *propose*; it cannot run commands.
+- **Evidence, not guesses.** Every fact has a source and a confidence level. What it cannot measure shows as *unavailable*, never as 0.
+- **Light.** About 0.4% CPU and under 100 MB in normal use. A 13 MB app.
 
-## Install (macOS, Apple silicon)
+## Install
 
-1. Download the latest `AGASTHY-…-apple-silicon.dmg` from [Releases](https://github.com/HMAKT99/Agasthy/releases) (macOS 12 or later).
-2. Open it and drag **AGASTHY** to **Applications**.
-3. The first time, right-click AGASTHY in Applications and choose **Open**. Releases are not yet notarized by Apple, so macOS asks once. If macOS says the app is damaged, run `xattr -dr com.apple.quarantine /Applications/AGASTHY.app` and open it again.
+**macOS (Apple silicon, macOS 12+)**
 
-AGASTHY lives in the menu bar as well as its window; closing the window keeps it running, and **Quit AGASTHY** is in the menu-bar menu. It offers new versions itself (signature-checked, installed only when you click **Install and restart**); this can be turned off in Settings → About.
+1. Download `AGASTHY-…-apple-silicon.dmg` from [Releases](https://github.com/HMAKT99/Agasthy/releases).
+2. Drag **AGASTHY** to **Applications**.
+3. First launch: right-click AGASTHY → **Open** (not yet notarized by Apple, so macOS asks once). If macOS says the app is damaged: `xattr -dr com.apple.quarantine /Applications/AGASTHY.app`.
 
-### Windows (x64, preview)
+**Windows (x64, preview)**
 
-Download `AGASTHY_…_x64-setup.exe` from [Releases](https://github.com/HMAKT99/Agasthy/releases) and run it. The installer is not code-signed yet, so Windows SmartScreen shows a warning: choose **More info → Run anyway**.
+Download `AGASTHY_…_x64-setup.exe` from [Releases](https://github.com/HMAKT99/Agasthy/releases) and run it. SmartScreen warns because the installer is not code-signed yet: **More info → Run anyway**.
 
-The preview is built and tested in CI on Windows but has not yet been used much on real Windows PCs; [please report](https://github.com/HMAKT99/Agasthy/issues/new) anything that looks wrong (Settings → About → **Report a problem** prepares the details). Known gaps on Windows: **Stop** for a process is not available (Force quit is), leftovers whose start AGASTHY did not see are not detected, and WinGet packages and GPU details are not shown.
+**Linux:** build from source (see [Development setup](#development-setup)); no packaged download yet.
 
-Intel Macs and Linux are not released yet (see [Supported platforms](#supported-platforms)).
+AGASTHY lives in the menu bar: closing the window keeps it running, and **Quit** is in the menu-bar menu. Updates are offered in the app, signature-checked, and installed only when you click **Install and restart**.
 
-## Why it exists
+## Supported platforms
 
-A developer machine accumulates hundreds of components spread across directories, terminals and configuration files: cloned repositories, applications, CLI tools, several copies of the same runtime, packages from several package managers, and more. Answering simple questions, such as "which Python actually runs?", "what did Homebrew install?" or "which of my clones have uncommitted work?", means running a dozen commands.
+| Platform | Status |
+|---|---|
+| macOS 12+ (Apple silicon) | **Supported.** Built and tested on macOS 15 / M2. |
+| macOS (Intel) | Expected to work from source; not tested, no download yet. |
+| Windows 10/11 (x64) | **Preview.** Installer with each release; built and tested in CI. Known gaps: graceful Stop (Force quit works), WinGet packages, GPU details. [Reports welcome](https://github.com/HMAKT99/Agasthy/issues/new). |
+| Linux | **From source.** Builds and passes tests in CI; not yet run on real Linux desktops. |
 
-AGASTHY reads the machine directly and keeps what it finds, plus the evidence behind each fact, in a local database.
+## Everything it does
 
-## What works today (macOS)
+<details>
+<summary>Full feature list</summary>
 
 | Area | What AGASTHY does |
 |---|---|
@@ -103,56 +121,32 @@ AGASTHY reads the machine directly and keeps what it finds, plus the evidence be
 
 Repositories, installed packages, binaries on PATH and applications are kept as **separate kinds**. A local clone is never treated as installed software.
 
-### Not built yet
 
-Open items are listed in [ROADMAP.md](ROADMAP.md), notably validating the Windows and Linux adapters on real hardware. The app's sidebar shows only the sections that work.
+Repositories, installed packages, binaries on PATH and applications are kept as **separate kinds**. A local clone is never treated as installed software. Open items are in [ROADMAP.md](ROADMAP.md).
 
-## Tour
+</details>
 
-<p align="center"><img src="docs/screenshots/tour.gif" width="900" alt="Tour: Overview insights, Agents, Token Usage, the Operator proposing a cleanup, the review dialog, Machine Graph and Storage" /></p>
+## Under the hood
 
-| | |
-|---|---|
-| <img src="docs/screenshots/overview.png" alt="Overview with ranked insights" /><br/>**Insights.** What needs attention now, each with one action. | <img src="docs/screenshots/usage.png" alt="Token Usage page" /><br/>**Token Usage.** Tokens and estimated cost by day, project and model. |
-| <img src="docs/screenshots/operator.png" alt="AI Operator answering Clean up after my agents" /><br/>**Ask your machine.** Answers from real data; changes are only proposed. | <img src="docs/screenshots/review.png" alt="Review dialog for stopping three processes" /><br/>**Nothing runs unreviewed.** Every change is a dry run you confirm. |
-| <img src="docs/screenshots/storage.png" alt="Storage and cleanup" /><br/>**Safe cleanup.** Only rebuildable folders Git ignores, into a restorable quarantine. | <img src="docs/screenshots/graph.png" alt="Machine Graph" /><br/>**Machine Graph.** Projects, runtimes and dependencies, and what depends on what. |
-
-<sub>Screenshots use a synthetic demo machine (`pnpm screenshots` regenerates them), not real data.</sub>
-
-## Supported platforms
-
-| Platform | Status |
-|---|---|
-| macOS 12+ (Apple Silicon) | Implemented and tested on macOS 15 / M2. |
-| macOS (Intel) | Expected to work; not yet tested. |
-| Windows 10/11 (x64) | **Preview.** Installer published with each release; built and tested in CI. Applications from the registry, Scoop, Chocolatey 2.x, npm/pnpm/uv/cargo, listening ports via `netstat`, agents and token usage. Not yet: graceful Stop (Force quit works), WinGet, GPU details. Feedback from real Windows PCs wanted. |
-| Linux | **Unvalidated.** `.desktop` applications (including Flatpak and Snap), Flatpak and Snap packages, Homebrew/npm/pnpm/uv/pip/cargo, listening ports via `lsof`; unit-tested, not yet run on Linux. GPU information reports "unsupported". |
-
-## Architecture
-
-A Rust workspace with a thin Tauri 2 shell and a React UI:
+Rust workspace, thin Tauri 2 shell, React UI. 290+ Rust tests, Playwright UI tests, CI on macOS, Windows and Linux.
 
 ```
-apps/desktop/            React + TypeScript UI; src-tauri/ is a thin command layer
-crates/core/             domain model, SQLite store (FTS5), migrations, audit log
+apps/desktop/             React + TypeScript UI; src-tauri/ is a thin command layer
+crates/core/              domain model, SQLite store (FTS5), migrations, audit log
 crates/platform-adapters/ OS adapters (macOS / Windows / Linux) and the guarded command runner
-crates/discovery/        read-only discovery: repositories, software, packages
-crates/provenance/       remote-URL parsing, credential redaction, confidence rules
-crates/graph/            graph views, shared dependencies, runtime impact analysis
-crates/process-manager/  processes, listening ports, guarded termination
-crates/cleanup/          disk analysis, cleanup safety checks, quarantine, Docker usage
-crates/actions/          typed action engine: plan (dry run) → confirm → execute → verify → audit
-crates/snapshots/        environment snapshots, comparison, reconstruction plans
-crates/security/         outdated software, unknown provenance, opt-in OSV.dev advisories
-crates/update-lab/       Git-worktree labs for trying dependency updates
-crates/system-monitor/   CPU / memory / disk / process telemetry
-crates/cli/              `agasthy` headless CLI (JSON output)
-packages/shared-types/   TypeScript types generated from the Rust model (ts-rs)
-packages/ui/             shared React components
-migrations/              SQL schema
+crates/discovery/         repositories, software, packages, AI ecosystem, token usage
+crates/graph/             graph views, shared dependencies, impact analysis
+crates/process-manager/   processes, ports, coding-agent sessions
+crates/cleanup/           disk analysis, safety checks, quarantine, Docker usage
+crates/actions/           typed actions: plan (dry run) → confirm → execute → verify → audit
+crates/ai-engine/         AI Operator: typed tools, built-in answers, model providers
+crates/snapshots/         environment snapshots, comparison, reconstruction plans
+crates/security/          outdated software, unknown provenance, opt-in OSV.dev advisories
+crates/update-lab/        Git-worktree labs for trying dependency updates
+crates/cli/               `agasthy` headless CLI (JSON output)
 ```
 
-See [docs/architecture.md](docs/architecture.md) for the data model, safety boundaries and how to add a platform.
+More in [docs/architecture.md](docs/architecture.md).
 
 ## Development setup
 
@@ -194,15 +188,11 @@ Details: [docs/development.md](docs/development.md).
 
 ## Privacy
 
-AGASTHY has no account, telemetry or analytics. Its only network requests are: an update check against this repository's GitHub Releases at start-up (can be turned off; sends nothing about your machine), OSV.dev advisory checks if you turn them on, and an AI model endpoint if you configure one (cloud models need a separate opt-in). The AI scan only checks whether local inference engines are listening on 127.0.0.1. It only looks for repositories in folders you add, stores results in a local SQLite file, and strips credentials from Git URLs before storing them. It runs external programs only from an allowlist, with fixed arguments and never through a shell. Full details: [docs/privacy.md](docs/privacy.md).
-
-## Roadmap
-
-Development is phased: foundation → MVP discovery → intelligence graph → AI ecosystem → system operations and safe cleanup → impact analysis, snapshots and security → AI operator and full Windows/Linux support. The live checklist is in [ROADMAP.md](ROADMAP.md).
+No account, telemetry or analytics. The only network requests: an update check against this repository's Releases (can be turned off; sends nothing about your machine), OSV.dev advisory checks if you turn them on, and an AI model endpoint if you configure one (cloud models need a separate opt-in). Repositories are scanned only in folders you add. External programs run only from an allowlist, with fixed arguments, never through a shell. Full details: [docs/privacy.md](docs/privacy.md).
 
 ## Contributing
 
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Report security issues as described in [SECURITY.md](SECURITY.md), not in public issues.
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and the [ROADMAP](ROADMAP.md). Found a bug? Settings → About → **Report a problem** prepares a redacted report. Security issues: [SECURITY.md](SECURITY.md), not public issues.
 
 ## Name
 
