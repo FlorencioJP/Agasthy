@@ -164,7 +164,7 @@ export function UsagePanel({ report, loading, error }: { report?: UsageReport; l
 function Breakdown({ title, rows }: { title: string; rows: { key: string; tokens: TokenCounts; cost: number; unpriced: boolean }[] }) {
   const max = Math.max(1, ...rows.map((r) => totalTokens(r.tokens)));
   return (
-    <table className="w-full text-[12px]">
+    <table className="h-fit w-full self-start text-[12px]">
       <caption className="mb-1 text-left text-[11.5px] text-muted">{title}</caption>
       <thead className="sr-only">
         <tr>

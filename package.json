@@ -18,7 +18,8 @@
     "format:check": "prettier --check .",
     "gen:types": "node scripts/gen-types.mjs",
     "check:types": "node scripts/gen-types.mjs --check",
-    "release:mac": "bash scripts/release-mac.sh"
+    "release:mac": "bash scripts/release-mac.sh",
+    "screenshots": "pnpm --filter @agasthy/desktop exec playwright test -c playwright.demo.config.ts"
   },
   "devDependencies": {
     "prettier": "3.10.1"

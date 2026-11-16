@@ -8,7 +8,8 @@ export function formatBytes(bytes: number, digits = 1): string {
   if (bytes < 1024) return `${bytes} B`;
   let v = bytes;
   let i = 0;
-  while (v >= 1024 && i < UNITS.length - 1) {
+  // Switch unit from 1000 up, so 1014 MB reads as 0.99 GB (as Finder does).
+  while (v >= 1000 && i < UNITS.length - 1) {
     v /= 1024;
     i += 1;
   }

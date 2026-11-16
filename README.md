@@ -16,6 +16,13 @@ Free disk space without breaking anything. Ask plain questions about your machin
   free and open source · no account · no telemetry
 </p>
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/agents-dark.png" />
+    <img src="docs/screenshots/agents.png" width="900" alt="AGASTHY Agents page: six coding-agent sessions with memory, MCP servers, dev servers and ports, and three processes left running after their agents exited" />
+  </picture>
+</p>
+
 ---
 
 ## Why you'll want it
@@ -88,9 +95,17 @@ Repositories, installed packages, binaries on PATH and applications are kept as 
 
 Open items are listed in [ROADMAP.md](ROADMAP.md), notably validating the Windows and Linux adapters on real hardware. The app's sidebar shows only the sections that work.
 
-## Screenshots
+## Tour
 
-No screenshots are included yet. Screenshots of a real machine show its hostname, applications and processes, so they will be added from a neutral demo machine.
+<p align="center"><img src="docs/screenshots/tour.gif" width="900" alt="Tour: Overview insights, Agents, Token Usage, the Operator proposing a cleanup, the review dialog, Machine Graph and Storage" /></p>
+
+| | |
+|---|---|
+| <img src="docs/screenshots/overview.png" alt="Overview with ranked insights" /><br/>**Insights.** What needs attention now, each with one action. | <img src="docs/screenshots/usage.png" alt="Token Usage page" /><br/>**Token Usage.** Tokens and estimated cost by day, project and model. |
+| <img src="docs/screenshots/operator.png" alt="AI Operator answering Clean up after my agents" /><br/>**Ask your machine.** Answers from real data; changes are only proposed. | <img src="docs/screenshots/review.png" alt="Review dialog for stopping three processes" /><br/>**Nothing runs unreviewed.** Every change is a dry run you confirm. |
+| <img src="docs/screenshots/storage.png" alt="Storage and cleanup" /><br/>**Safe cleanup.** Only rebuildable folders Git ignores, into a restorable quarantine. | <img src="docs/screenshots/graph.png" alt="Machine Graph" /><br/>**Machine Graph.** Projects, runtimes and dependencies, and what depends on what. |
+
+<sub>Screenshots use a synthetic demo machine (`pnpm screenshots` regenerates them), not real data.</sub>
 
 ## Supported platforms
 

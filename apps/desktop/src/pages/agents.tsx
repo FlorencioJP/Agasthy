@@ -25,6 +25,11 @@ const AGENT_TONE: Record<string, string> = {
   codex: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   "gemini-cli": "bg-sky-500/15 text-sky-700 dark:text-sky-300",
   "cursor-agent": "bg-zinc-500/15 text-fg",
+  "app:Cursor": "bg-zinc-500/15 text-fg",
+  hermes: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
+  openclaw: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
+  aider: "bg-lime-500/15 text-lime-700 dark:text-lime-300",
+  "copilot-cli": "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300",
 };
 
 const stoppable = (p: SessionProcess) => !p.protected;
