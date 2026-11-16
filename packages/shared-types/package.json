@@ -1,0 +1,19 @@
+{
+  "name": "@agasthy/shared-types",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "description": "TypeScript types generated from AGASTHY's Rust domain model (ts-rs).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "lint": "echo 'generated code: no lint'",
+    "test": "echo 'generated code: no tests'"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

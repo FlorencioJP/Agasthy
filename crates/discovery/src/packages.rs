@@ -1,0 +1,713 @@
+//! Package-manager inventories.
+//!
+//! Each manager is read with one fixed, read-only command. Parsers take that
+//! command's output and are unit-tested against recorded samples.
+
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+use agasthy_core::{
+    Confidence, EntityInput, EntityKind, EvidenceInput, IngestBatch, IssueKind, PruneScope,
+    RelationKind, RelationshipInput, ScanIssue, ScanKind,
+};
+use agasthy_platform::{CommandError, CommandRunner, CommandSpec, PackageManagerId, Platform};
+use agasthy_provenance::{ProvenanceSource, confidence_for, parse_github_homepage};
+
+use crate::attrs::{ManagerState, PackageAttrs, PackageManagerAttrs};
+use crate::catalog::PROBE_ENV;
+use crate::repos::remote_entity;
+use crate::software::app_id;
+use crate::version::extract_version;
+use crate::{ProgressFn, ScanProgress};
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PackageRecord {
+    pub name: String,
+    pub version: Option<String>,
+    pub attrs: PackageAttrs,
+    /// Entity id override (Homebrew casks use a separate namespace).
+    pub id: String,
+}
+
+impl PackageRecord {
+    fn new(manager: PackageManagerId, kind: &str, name: &str, version: Option<String>) -> Self {
+        Self {
+            id: format!("package:{}:{}", manager.as_str(), name),
+            name: name.into(),
+            version,
+            attrs: PackageAttrs {
+                manager,
+                package_kind: kind.into(),
+                description: None,
+                homepage: None,
+                license: None,
+                installed_on_request: None,
+                upstream: None,
+                provides: Vec::new(),
+                install_path: None,
+            },
+        }
+    }
+}
+
+/// The read-only command used to list a manager's packages.
+pub fn inventory_command(id: PackageManagerId) -> Option<CommandSpec> {
+    let spec = match id {
+        PackageManagerId::Homebrew => {
+            CommandSpec::new("brew", &["info", "--json=v2", "--installed"])
+                .timeout(Duration::from_secs(120))
+                .max_output(96 * 1024 * 1024)
+        }
+        PackageManagerId::Npm => CommandSpec::new("npm", &["ls", "-g", "--depth=0", "--json"])
+            .timeout(Duration::from_secs(60)),
+        PackageManagerId::Pnpm => CommandSpec::new("pnpm", &["ls", "-g", "--depth=0", "--json"])
+            .timeout(Duration::from_secs(60)),
+        PackageManagerId::Uv => {
+            CommandSpec::new("uv", &["tool", "list"]).timeout(Duration::from_secs(30))
+        }
+        PackageManagerId::Pip => CommandSpec::new(
+            "python3",
+            &[
+                "-m",
+                "pip",
+                "list",
+                "--format=json",
+                "--disable-pip-version-check",
+                "--no-input",
+            ],
+        )
+        .timeout(Duration::from_secs(60)),
+        PackageManagerId::Cargo => {
+            CommandSpec::new("cargo", &["install", "--list"]).timeout(Duration::from_secs(30))
+        }
+        _ => return None,
+    };
+    let mut spec = spec;
+    for (k, v) in PROBE_ENV {
+        spec = spec.env(k, v);
+    }
+    Some(spec)
+}
+
+fn version_command(id: PackageManagerId) -> CommandSpec {
+    let args: &[&str] = match id {
+        PackageManagerId::Pip => &["-m", "pip", "--version"],
+        _ => &["--version"],
+    };
+    let mut spec = CommandSpec::new(id.binary(), args).timeout(Duration::from_secs(10));
+    for (k, v) in PROBE_ENV {
+        spec = spec.env(k, v);
+    }
+    spec
+}
+
+pub fn parse_inventory(id: PackageManagerId, stdout: &str) -> Result<Vec<PackageRecord>, String> {
+    match id {
+        PackageManagerId::Homebrew => parse_brew(stdout),
+        PackageManagerId::Npm => parse_npm(stdout, PackageManagerId::Npm),
+        PackageManagerId::Pnpm => parse_pnpm(stdout),
+        PackageManagerId::Uv => Ok(parse_uv(stdout)),
+        PackageManagerId::Pip => parse_pip(stdout),
+        PackageManagerId::Cargo => Ok(parse_cargo(stdout)),
+        other => Err(format!(
+            "{} inventory is not implemented",
+            other.display_name()
+        )),
+    }
+}
+
+fn s(v: &serde_json::Value, k: &str) -> Option<String> {
+    v.get(k)
+        .and_then(|x| x.as_str())
+        .map(|x| x.trim().chars().take(512).collect::<String>())
+        .filter(|x| !x.is_empty())
+}
+
+pub fn parse_brew(stdout: &str) -> Result<Vec<PackageRecord>, String> {
+    let v: serde_json::Value =
+        serde_json::from_str(stdout).map_err(|e| format!("invalid JSON from brew: {e}"))?;
+    let mut out = Vec::new();
+    for f in v
+        .get("formulae")
+        .and_then(|x| x.as_array())
+        .into_iter()
+        .flatten()
+    {
+        let Some(name) = s(f, "name") else { continue };
+        let installed = f.get("installed").and_then(|x| x.as_array());
+        let latest_installed = installed.and_then(|a| a.last());
+        let version = latest_installed
+            .and_then(|i| s(i, "version"))
+            .or_else(|| f.get("versions").and_then(|v| s(v, "stable")));
+        let mut rec = PackageRecord::new(PackageManagerId::Homebrew, "formula", &name, version);
+        rec.attrs.description = s(f, "desc");
+        rec.attrs.homepage = s(f, "homepage");
+        rec.attrs.license = s(f, "license");
+        rec.attrs.installed_on_request = latest_installed
+            .and_then(|i| i.get("installed_on_request"))
+            .and_then(|b| b.as_bool());
+        rec.attrs.upstream = rec
+            .attrs
+            .homepage
+            .as_deref()
+            .and_then(parse_github_homepage);
+        out.push(rec);
+    }
+    for c in v
+        .get("casks")
+        .and_then(|x| x.as_array())
+        .into_iter()
+        .flatten()
+    {
+        let Some(token) = s(c, "token") else { continue };
+        let version = s(c, "installed").or_else(|| s(c, "version"));
+        let display = c
+            .get("name")
+            .and_then(|n| n.as_array())
+            .and_then(|a| a.first())
+            .and_then(|n| n.as_str())
+            .map(str::to_string);
+        let mut rec = PackageRecord::new(PackageManagerId::Homebrew, "cask", &token, version);
+        rec.id = format!("package:homebrew-cask:{token}");
+        rec.attrs.description = s(c, "desc").or(display);
+        rec.attrs.homepage = s(c, "homepage");
+        rec.attrs.upstream = rec
+            .attrs
+            .homepage
+            .as_deref()
+            .and_then(parse_github_homepage);
+        for art in c
+            .get("artifacts")
+            .and_then(|a| a.as_array())
+            .into_iter()
+            .flatten()
+        {
+            if let Some(apps) = art.get("app").and_then(|a| a.as_array()) {
+                for app in apps {
+                    // Entries are "Name.app" or {"target": "Name.app"}.
+                    if let Some(name) = app.as_str() {
+                        rec.attrs.provides.push(name.to_string());
+                    } else if let Some(t) = app.get("target").and_then(|t| t.as_str()) {
+                        rec.attrs.provides.push(t.to_string());
+                    }
+                }
+            }
+        }
+        out.push(rec);
+    }
+    Ok(out)
+}
+
+pub fn parse_npm(stdout: &str, manager: PackageManagerId) -> Result<Vec<PackageRecord>, String> {
+    let v: serde_json::Value =
+        serde_json::from_str(stdout).map_err(|e| format!("invalid JSON from npm: {e}"))?;
+    let mut out = Vec::new();
+    if let Some(deps) = v.get("dependencies").and_then(|d| d.as_object()) {
+        for (name, info) in deps {
+            let mut rec = PackageRecord::new(manager, "global", name, s(info, "version"));
+            rec.attrs.install_path = s(info, "path");
+            out.push(rec);
+        }
+    }
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(out)
+}
+
+pub fn parse_pnpm(stdout: &str) -> Result<Vec<PackageRecord>, String> {
+    let trimmed = stdout.trim();
+    if trimmed.is_empty() {
+        return Ok(Vec::new());
+    }
+    let v: serde_json::Value =
+        serde_json::from_str(trimmed).map_err(|e| format!("invalid JSON from pnpm: {e}"))?;
+    let mut out = Vec::new();
+    let roots: Vec<&serde_json::Value> = match &v {
+        serde_json::Value::Array(a) => a.iter().collect(),
+        other => vec![other],
+    };
+    for root in roots {
+        for key in ["dependencies", "devDependencies"] {
+            if let Some(deps) = root.get(key).and_then(|d| d.as_object()) {
+                for (name, info) in deps {
+                    let mut rec = PackageRecord::new(
+                        PackageManagerId::Pnpm,
+                        "global",
+                        name,
+                        s(info, "version"),
+                    );
+                    rec.attrs.install_path = s(info, "path");
+                    out.push(rec);
+                }
+            }
+        }
+    }
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    out.dedup_by(|a, b| a.name == b.name);
+    Ok(out)
+}
+
+pub fn parse_uv(stdout: &str) -> Vec<PackageRecord> {
+    let mut out: Vec<PackageRecord> = Vec::new();
+    for line in stdout.lines() {
+        let l = line.trim_end();
+        if l.is_empty() || l.starts_with("No tools") {
+            continue;
+        }
+        if let Some(exe) = l.trim_start().strip_prefix("- ") {
+            if let Some(last) = out.last_mut() {
+                last.attrs.provides.push(exe.trim().to_string());
+            }
+            continue;
+        }
+        if l.starts_with(' ') || l.starts_with('\t') {
+            continue;
+        }
+        let mut parts = l.split_whitespace();
+        let Some(name) = parts.next() else { continue };
+        let version = parts.next().map(|v| v.trim_start_matches('v').to_string());
+        out.push(PackageRecord::new(
+            PackageManagerId::Uv,
+            "tool",
+            name,
+            version,
+        ));
+    }
+    out
+}
+
+pub fn parse_pip(stdout: &str) -> Result<Vec<PackageRecord>, String> {
+    let v: serde_json::Value =
+        serde_json::from_str(stdout.trim()).map_err(|e| format!("invalid JSON from pip: {e}"))?;
+    let arr = v.as_array().ok_or("pip output is not a list")?;
+    let mut out = Vec::new();
+    for p in arr {
+        let Some(name) = s(p, "name") else { continue };
+        out.push(PackageRecord::new(
+            PackageManagerId::Pip,
+            "distribution",
+            &name.to_lowercase(),
+            s(p, "version"),
+        ));
+    }
+    Ok(out)
+}
+
+pub fn parse_cargo(stdout: &str) -> Vec<PackageRecord> {
+    let mut out: Vec<PackageRecord> = Vec::new();
+    for line in stdout.lines() {
+        if line.starts_with(' ') || line.starts_with('\t') {
+            if let Some(last) = out.last_mut() {
+                let b = line.trim();
+                if !b.is_empty() {
+                    last.attrs.provides.push(b.to_string());
+                }
+            }
+            continue;
+        }
+        let l = line.trim().trim_end_matches(':');
+        if l.is_empty() {
+            continue;
+        }
+        let mut parts = l.splitn(3, ' ');
+        let Some(name) = parts.next() else { continue };
+        let version = parts.next().map(|v| v.trim_start_matches('v').to_string());
+        let mut rec = PackageRecord::new(PackageManagerId::Cargo, "crate", name, version);
+        if let Some(src) = parts.next() {
+            rec.attrs.install_path = Some(src.trim_matches(|c| c == '(' || c == ')').to_string());
+        }
+        out.push(rec);
+    }
+    out
+}
+
+/// Read every package manager the platform supports and build an ingest batch.
+pub fn scan_packages(
+    platform: &dyn Platform,
+    runner: &dyn CommandRunner,
+    progress: ProgressFn<'_>,
+) -> IngestBatch {
+    let mut batch = IngestBatch::new(ScanKind::Packages);
+    let managers = platform.supported_package_managers();
+    let total = managers.len() as u32;
+    let app_dirs: Vec<PathBuf> = {
+        let mut v = vec![PathBuf::from("/Applications")];
+        if let Some(h) = platform.home_dir() {
+            v.push(h.join("Applications"));
+        }
+        v
+    };
+
+    for (i, support) in managers.iter().enumerate() {
+        let id = support.id;
+        progress(ScanProgress {
+            phase: "packages".into(),
+            done: i as u32,
+            total: Some(total),
+            current: Some(id.display_name().into()),
+        });
+        let manager_entity_id = format!("package_manager:{}", id.as_str());
+        let binary = runner.resolve(id.binary());
+        let mut attrs = PackageManagerAttrs {
+            manager: id,
+            display_name: id.display_name().into(),
+            state: ManagerState::NotInstalled,
+            package_count: None,
+            inventory_command: inventory_command(id).map(|c| c.display()),
+        };
+        let mut evidence = Vec::new();
+
+        match (&binary, support.inventory_implemented) {
+            (None, _) => {
+                evidence.push(EvidenceInput::new(
+                    "executable_missing",
+                    format!(
+                        "`{}` was not found in the searched directories",
+                        id.binary()
+                    ),
+                    "PATH search",
+                    Confidence::Verified,
+                ));
+            }
+            (Some(bin), false) => {
+                attrs.state = ManagerState::NotImplemented {
+                    binary: bin.display().to_string(),
+                };
+                batch.issues.push(ScanIssue::new(
+                    IssueKind::Unsupported,
+                    id.display_name(),
+                    "installed, but reading its inventory is not implemented in this build",
+                ));
+            }
+            (Some(bin), true) => {
+                let version = runner
+                    .run(&version_command(id))
+                    .ok()
+                    .and_then(|o| extract_version(&format!("{}\n{}", o.stdout, o.stderr)));
+                let cmd = inventory_command(id).expect("implemented managers have a command");
+                match run_inventory(runner, &cmd, id) {
+                    Ok(records) => {
+                        attrs.package_count = Some(records.len() as u32);
+                        attrs.state = ManagerState::Read {
+                            binary: bin.display().to_string(),
+                            version: version.clone(),
+                        };
+                        evidence.push(EvidenceInput::new(
+                            "inventory_command",
+                            format!("{} packages listed", records.len()),
+                            cmd.display(),
+                            Confidence::Verified,
+                        ));
+                        for rec in records {
+                            push_package(&mut batch, rec, &manager_entity_id, &cmd, &app_dirs);
+                        }
+                        batch.prune.push(PruneScope {
+                            kind: EntityKind::Package,
+                            source: Some(id.as_str().into()),
+                        });
+                    }
+                    Err(message) => {
+                        batch.issues.push(ScanIssue::new(
+                            IssueKind::CommandFailed,
+                            id.display_name(),
+                            message.clone(),
+                        ));
+                        attrs.state = ManagerState::Failed {
+                            binary: bin.display().to_string(),
+                            message,
+                        };
+                    }
+                }
+            }
+        }
+
+        batch.entities.push(EntityInput {
+            id: manager_entity_id,
+            kind: EntityKind::PackageManager,
+            name: id.display_name().into(),
+            path: binary.as_ref().map(|b| b.display().to_string()),
+            version: match &attrs.state {
+                ManagerState::Read { version, .. } => version.clone(),
+                _ => None,
+            },
+            source: "package_managers".into(),
+            attributes: serde_json::to_value(&attrs).unwrap_or_default(),
+            evidence,
+        });
+    }
+    batch.prune.push(PruneScope {
+        kind: EntityKind::PackageManager,
+        source: None,
+    });
+    progress(ScanProgress {
+        phase: "done".into(),
+        done: total,
+        total: Some(total),
+        current: None,
+    });
+    batch
+}
+
+fn run_inventory(
+    runner: &dyn CommandRunner,
+    cmd: &CommandSpec,
+    id: PackageManagerId,
+) -> Result<Vec<PackageRecord>, String> {
+    let out = runner.run(cmd).map_err(|e| match e {
+        CommandError::TimedOut { after_ms, .. } => {
+            format!(
+                "`{}` did not finish within {} s",
+                cmd.display(),
+                after_ms / 1000
+            )
+        }
+        other => other.to_string(),
+    })?;
+    if out.truncated {
+        return Err(format!(
+            "output of `{}` exceeded the size limit",
+            cmd.display()
+        ));
+    }
+    // npm and pnpm exit non-zero for peer-dependency warnings but still print
+    // valid JSON, so the parser decides.
+    match parse_inventory(id, &out.stdout) {
+        Ok(r) => Ok(r),
+        Err(parse_err) if !out.success() => Err(format!(
+            "`{}` exited with {:?}: {}",
+            cmd.display(),
+            out.exit_code,
+            out.stderr
+                .lines()
+                .find(|l| !l.trim().is_empty())
+                .unwrap_or(&parse_err)
+        )),
+        Err(e) => Err(e),
+    }
+}
+
+fn push_package(
+    batch: &mut IngestBatch,
+    rec: PackageRecord,
+    manager_entity_id: &str,
+    cmd: &CommandSpec,
+    app_dirs: &[PathBuf],
+) {
+    let manager = rec.attrs.manager;
+    batch.relationships.push(RelationshipInput {
+        from_id: rec.id.clone(),
+        to_id: manager_entity_id.to_string(),
+        kind: RelationKind::ManagedBy,
+        confidence: Confidence::Verified,
+        evidence: vec![EvidenceInput::new(
+            "inventory_command",
+            format!("listed by {}", manager.display_name()),
+            cmd.display(),
+            Confidence::Verified,
+        )],
+    });
+    if let Some(up) = &rec.attrs.upstream {
+        let rid = up.entity_id();
+        if !batch.entities.iter().any(|e| e.id == rid) {
+            batch
+                .entities
+                .push(remote_entity(&rid, up, "package_metadata"));
+        }
+        let conf = confidence_for(ProvenanceSource::PackageMetadata);
+        batch.relationships.push(RelationshipInput {
+            from_id: rec.id.clone(),
+            to_id: rid,
+            kind: RelationKind::UpstreamProject,
+            confidence: conf,
+            evidence: vec![EvidenceInput::new(
+                "package_homepage",
+                format!(
+                    "{} metadata gives homepage {}",
+                    manager.display_name(),
+                    rec.attrs.homepage.as_deref().unwrap_or("")
+                ),
+                cmd.display(),
+                conf,
+            )],
+        });
+    }
+    if rec.attrs.package_kind == "cask" {
+        for app in &rec.attrs.provides {
+            if let Some(path) = app_dirs
+                .iter()
+                .map(|d| d.join(app))
+                .find(|p| Path::new(p).is_dir())
+            {
+                batch.relationships.push(RelationshipInput {
+                    from_id: rec.id.clone(),
+                    to_id: app_id(&path.display().to_string()),
+                    kind: RelationKind::Provides,
+                    confidence: Confidence::Strong,
+                    evidence: vec![EvidenceInput::new(
+                        "cask_artifact",
+                        format!(
+                            "cask lists `{app}` as an app artifact and it exists at {}",
+                            path.display()
+                        ),
+                        cmd.display(),
+                        Confidence::Strong,
+                    )],
+                });
+            }
+        }
+    }
+    batch.entities.push(EntityInput {
+        id: rec.id,
+        kind: EntityKind::Package,
+        name: rec.name,
+        path: rec.attrs.install_path.clone(),
+        version: rec.version,
+        source: manager.as_str().into(),
+        attributes: serde_json::to_value(&rec.attrs).unwrap_or_default(),
+        evidence: vec![EvidenceInput::new(
+            "package_manager_inventory",
+            format!("listed by {}", manager.display_name()),
+            cmd.display(),
+            Confidence::Verified,
+        )],
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use agasthy_platform::{CommandOutput, MockCommandRunner};
+
+    // Recorded-shape samples (trimmed). Development fixtures only.
+    const BREW: &str = r#"{"formulae":[{"name":"jq","full_name":"jq","desc":"Lightweight and flexible command-line JSON processor","license":"MIT","homepage":"https://jqlang.github.io/jq/","versions":{"stable":"1.7.1"},"installed":[{"version":"1.7.1","installed_on_request":true}]},{"name":"ripgrep","desc":"Search tool","license":"Unlicense","homepage":"https://github.com/BurntSushi/ripgrep","versions":{"stable":"14.1.1"},"installed":[{"version":"14.1.1","installed_on_request":false}]}],"casks":[{"token":"visual-studio-code","name":["Microsoft Visual Studio Code"],"desc":"Open-source code editor","homepage":"https://code.visualstudio.com/","version":"1.96.0","installed":"1.95.3","artifacts":[{"app":["Visual Studio Code.app"]},{"binary":["code"]}]}]}"#;
+
+    #[test]
+    fn brew_parsing() {
+        let r = parse_brew(BREW).unwrap();
+        assert_eq!(r.len(), 3);
+        let jq = &r[0];
+        assert_eq!(jq.id, "package:homebrew:jq");
+        assert_eq!(jq.version.as_deref(), Some("1.7.1"));
+        assert_eq!(jq.attrs.installed_on_request, Some(true));
+        assert!(
+            jq.attrs.upstream.is_none(),
+            "github.io homepage is not a repo"
+        );
+        let rg = &r[1];
+        assert_eq!(
+            rg.attrs.upstream.as_ref().unwrap().key(),
+            "github.com/burntsushi/ripgrep"
+        );
+        let code = &r[2];
+        assert_eq!(code.id, "package:homebrew-cask:visual-studio-code");
+        assert_eq!(
+            code.version.as_deref(),
+            Some("1.95.3"),
+            "installed, not latest"
+        );
+        assert_eq!(code.attrs.provides, vec!["Visual Studio Code.app"]);
+        assert!(parse_brew("not json").is_err());
+    }
+
+    #[test]
+    fn npm_and_pnpm_parsing() {
+        let npm = r#"{"name":"lib","dependencies":{"typescript":{"version":"5.9.3"},"@anthropic-ai/claude-code":{"version":"2.1.0"}}}"#;
+        let r = parse_npm(npm, PackageManagerId::Npm).unwrap();
+        assert_eq!(r.len(), 2);
+        assert_eq!(r[0].id, "package:npm:@anthropic-ai/claude-code");
+        let pnpm = r#"[{"path":"/x","dependencies":{"vercel":{"version":"39.0.0","path":"/x/node_modules/vercel"}}}]"#;
+        let r = parse_pnpm(pnpm).unwrap();
+        assert_eq!(r[0].name, "vercel");
+        assert_eq!(
+            r[0].attrs.install_path.as_deref(),
+            Some("/x/node_modules/vercel")
+        );
+        assert!(parse_pnpm("").unwrap().is_empty());
+    }
+
+    #[test]
+    fn uv_cargo_pip_parsing() {
+        let uv = "ruff v0.6.9\n- ruff\nblack v24.1.0\n- black\n- blackd\n";
+        let r = parse_uv(uv);
+        assert_eq!(r.len(), 2);
+        assert_eq!(r[1].attrs.provides, vec!["black", "blackd"]);
+        assert_eq!(r[0].version.as_deref(), Some("0.6.9"));
+        assert!(parse_uv("No tools installed\n").is_empty());
+
+        let cargo = "cargo-watch v8.5.2:\n    cargo-watch\nmytool v0.1.0 (/Users/u/src/mytool):\n    mytool\n";
+        let r = parse_cargo(cargo);
+        assert_eq!(r.len(), 2);
+        assert_eq!(
+            r[1].attrs.install_path.as_deref(),
+            Some("/Users/u/src/mytool")
+        );
+        assert_eq!(r[0].attrs.provides, vec!["cargo-watch"]);
+
+        let pip = r#"[{"name":"Requests","version":"2.32.3"},{"name":"pip","version":"25.2"}]"#;
+        let r = parse_pip(pip).unwrap();
+        assert_eq!(r[0].id, "package:pip:requests");
+    }
+
+    #[test]
+    fn missing_failed_and_unimplemented_managers_are_reported_honestly() {
+        let m = MockCommandRunner::new();
+        // brew present and works; npm present but fails; others absent.
+        m.on(
+            "brew",
+            &["--version"],
+            Ok(CommandOutput::ok("Homebrew 7.0.12")),
+        );
+        m.on(
+            "brew",
+            &["info", "--json=v2", "--installed"],
+            Ok(CommandOutput::ok(BREW)),
+        );
+        m.on("npm", &["--version"], Ok(CommandOutput::ok("11.6.0")));
+        m.on(
+            "npm",
+            &["ls", "-g", "--depth=0", "--json"],
+            Err(CommandError::TimedOut {
+                program: "npm".into(),
+                after_ms: 60_000,
+            }),
+        );
+        let platform = agasthy_platform::current();
+        let batch = scan_packages(platform.as_ref(), &m, &crate::no_progress);
+
+        let mgr = |id: &str| {
+            batch
+                .entities
+                .iter()
+                .find(|e| e.id == format!("package_manager:{id}"))
+                .map(|e| e.attributes["state"]["state"].as_str().unwrap().to_string())
+        };
+        if platform
+            .supported_package_managers()
+            .iter()
+            .any(|s| s.id == PackageManagerId::Homebrew)
+        {
+            assert_eq!(mgr("homebrew").as_deref(), Some("read"));
+            assert!(
+                batch
+                    .entities
+                    .iter()
+                    .any(|e| e.id == "package:homebrew:ripgrep")
+            );
+            assert!(
+                batch
+                    .prune
+                    .iter()
+                    .any(|p| p.source.as_deref() == Some("homebrew"))
+            );
+        }
+        assert_eq!(mgr("npm").as_deref(), Some("failed"));
+        assert_eq!(mgr("pnpm").as_deref(), Some("not_installed"));
+        // npm failed, so its previously stored packages must not be pruned.
+        assert!(
+            !batch
+                .prune
+                .iter()
+                .any(|p| p.source.as_deref() == Some("npm"))
+        );
+        assert!(batch.issues.iter().any(|i| i.subject.contains("npm")));
+    }
+}

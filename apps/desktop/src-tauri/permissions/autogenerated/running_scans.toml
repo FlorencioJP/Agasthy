@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-running-scans"
+description = "Enables the running_scans command without any pre-configured scope."
+commands.allow = ["running_scans"]
+
+[[permission]]
+identifier = "deny-running-scans"
+description = "Denies the running_scans command without any pre-configured scope."
+commands.deny = ["running_scans"]

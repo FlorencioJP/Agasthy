@@ -1,0 +1,104 @@
+/**
+ * DEVELOPMENT FIXTURE — automated tests only.
+ *
+ * A stand-in for the Tauri backend so UI tests can run in a browser. Every
+ * value here is synthetic and labelled as such ("fixture-…", example.invalid);
+ * it is never bundled into the application.
+ */
+import type { Page } from "@playwright/test";
+
+export async function installFixtureIpc(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const now = Date.now();
+    const avail = <T,>(value: T) => ({ status: "available", value });
+    const repoAttrs = {
+      scan_root: "/fixture/code",
+      git_dir_kind: "directory",
+      head: avail({ branch: "main", detached: false, unborn: false, commit_sha: "0123456789abcdef0123456789abcdef01234567", last_commit_at: now - 3600_000 }),
+      working_tree: avail({ clean: false, staged: 0, modified: 2, untracked: 1, conflicted: 0 }),
+      local_branches: avail(3),
+      remotes: [{ name: "origin", url: "https://example.invalid/fixture/widget.git", credentials_redacted: false, parsed: null }],
+      primary_remote: null,
+      manifests: ["package.json"],
+      languages: [{ language: "TypeScript", files: 12 }],
+      primary_language: "TypeScript",
+      frameworks: ["React"],
+      license: { spdx: "Apache-2.0", source: "LICENSE" },
+      size_bytes: avail(1048576),
+      clones_of_same_remote: 1,
+    };
+    const repo = {
+      id: "repository:/fixture/code/fixture-widget",
+      kind: "repository",
+      name: "fixture-widget",
+      path: "/fixture/code/fixture-widget",
+      version: "0123456789ab",
+      source: "git",
+      attributes: repoAttrs,
+      first_seen: now - 60_000,
+      last_seen: now,
+    };
+    const unavailableGpu = { status: "unavailable", reason: "fixture: not measured" };
+    const responses: Record<string, unknown> = {
+      app_info: {
+        version: "0.0.0-fixture",
+        platform: { os: "fixture-os", os_version: null, arch: "fixture-arch", support_level: "skeleton" },
+        data_dir: "/fixture/data",
+        db_path: "/fixture/data/agasthy.db",
+        schema_version: 1,
+        search_dirs: [{ path: "/fixture/bin", origin: "process_path" }],
+        command_allowlist: ["git"],
+      },
+      telemetry: {
+        taken_at: now,
+        host: { hostname: "fixture-host", os_name: "FixtureOS", os_version: "1.0", kernel_version: null, cpu_arch: "fixture-arch", uptime_secs: 3600 },
+        cpu: { status: "unavailable", reason: "collecting the first CPU sample" },
+        memory: avail({ total_bytes: 8 * 1024 ** 3, used_bytes: 2 * 1024 ** 3, available_bytes: 6 * 1024 ** 3, swap_total_bytes: 0, swap_used_bytes: 0 }),
+        load_average: { status: "unsupported", platform: "fixture-os" },
+        disks: avail([]),
+        process_count: avail(1),
+        top_by_memory: avail([{ pid: 1, name: "fixture-process", cpu_percent: unavailableGpu, memory_bytes: 1024, exe: null }]),
+        top_by_cpu: { status: "unavailable", reason: "collecting the first CPU sample" },
+        gpu_utilisation: unavailableGpu,
+      },
+      gpus: unavailableGpu,
+      overview: {
+        counts: [
+          { kind: "repository", count: 1 },
+          { kind: "application", count: 0 },
+          { kind: "binary", count: 0 },
+          { kind: "runtime", count: 0 },
+          { kind: "package", count: 0 },
+          { kind: "package_manager", count: 0 },
+          { kind: "remote_project", count: 0 },
+        ],
+        recent: [repo],
+        latest_scans: [
+          { id: 1, kind: "repositories", status: "completed", started_at: now - 5000, finished_at: now - 4000, entities_found: 1, entities_removed: 0, issues: [] },
+        ],
+        scan_roots: 1,
+        dirty_repositories: 1,
+        duplicate_clone_links: 0,
+        binaries_installed_by_package: 0,
+      },
+      list_scan_roots: [{ id: 1, path: "/fixture/code", enabled: true, max_depth: 6, added_at: now }],
+      running_scans: [],
+      list_scans: [],
+      list_audit: [],
+      entity_detail: {
+        entity: repo,
+        evidence: [{ id: 1, kind: "git_directory", detail: "`.git` directory present", source: "/fixture/code/fixture-widget/.git", confidence: "verified", observed_at: now }],
+        outgoing: [],
+        incoming: [],
+      },
+    };
+    window.__AGASTHY_TEST_IPC__ = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
+      if (cmd === "list_entities") {
+        const q = (args?.query ?? {}) as { kind?: string | null };
+        return (q.kind === "repository" || q.kind == null ? [repo] : []) as T;
+      }
+      if (cmd in responses) return responses[cmd] as T;
+      throw `fixture: no response for ${cmd}`;
+    };
+  });
+}

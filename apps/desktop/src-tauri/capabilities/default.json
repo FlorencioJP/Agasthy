@@ -1,0 +1,25 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The main window: AGASTHY's own read-only commands, the folder picker and reveal-in-file-manager. Nothing else.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "opener:allow-reveal-item-in-dir",
+    "allow-app-info",
+    "allow-telemetry",
+    "allow-gpus",
+    "allow-overview",
+    "allow-list-scan-roots",
+    "allow-add-scan-root",
+    "allow-remove-scan-root",
+    "allow-set-scan-root-enabled",
+    "allow-run-scan",
+    "allow-running-scans",
+    "allow-list-entities",
+    "allow-entity-detail",
+    "allow-list-scans",
+    "allow-list-audit"
+  ]
+}

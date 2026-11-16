@@ -1,0 +1,22 @@
+[package]
+name = "agasthy-cli"
+description = "Headless AGASTHY discovery, for verification and scripting"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "agasthy"
+path = "src/main.rs"
+
+[dependencies]
+agasthy-core.workspace = true
+agasthy-platform.workspace = true
+agasthy-discovery.workspace = true
+agasthy-system-monitor.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

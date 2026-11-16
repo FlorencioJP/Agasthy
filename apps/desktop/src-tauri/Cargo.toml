@@ -1,0 +1,30 @@
+[package]
+name = "agasthy-desktop"
+description = "AGASTHY desktop application"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "agasthy_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+agasthy-core.workspace = true
+agasthy-platform.workspace = true
+agasthy-discovery.workspace = true
+agasthy-system-monitor.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true
+tauri = { version = "2.12", features = [] }
+tauri-plugin-dialog = "2.8"
+tauri-plugin-opener = "2.7"
+
+[lints]
+workspace = true

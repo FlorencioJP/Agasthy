@@ -1,0 +1,79 @@
+# Roadmap
+
+A box is ticked only when the item is implemented **and** verified. Anything partial is described as such.
+
+## Phase 0: Repository foundation
+
+- [x] Monorepo: Cargo workspace + pnpm workspace
+- [x] Tauri 2 + React 19 + TypeScript + Vite + Tailwind CSS desktop shell
+- [x] Shared types generated from Rust (ts-rs) with a staleness check (`pnpm check:types`)
+- [x] SQLite with embedded, versioned migrations; FTS5 full-text index
+- [x] Platform adapter interfaces (`SystemPaths`, `AppInventory`, `ProbePolicy`, `Platform`)
+- [x] Guarded command runner (allowlist, no shell, timeouts, output caps) + mock for tests
+- [x] Append-only audit log (enforced by database triggers)
+- [x] Original icon and wordmark; light and dark themes
+- [x] CI workflows (macOS, Windows, Linux) and security workflow, *written but not yet run on GitHub*
+- [x] Architecture, privacy and development documentation
+- [x] Desktop shell builds and launches on macOS
+
+## Phase 1: Functional MVP (macOS)
+
+- [x] User-selected scan folders with validation (no system roots, no symlink escape, canonical paths)
+- [x] Git repository discovery: branch, HEAD, last commit, working tree, branches, remotes, size
+- [x] Remote parsing and GitHub origin detection; credential redaction
+- [x] Duplicate clone detection
+- [x] Language, framework, manifest and licence detection
+- [x] Installed applications (macOS `Info.plist`)
+- [x] Catalogued CLI tools and runtimes on PATH with versions, active vs shadowed copies, install hints
+- [x] Package inventories: Homebrew, npm, pnpm, uv, pip, cargo
+- [x] Binary → package links (Homebrew keg, npm global, uv tool, pnpm global)
+- [x] CPU, memory, swap, disk, load, process and GPU-model telemetry
+- [x] SQLite persistence with evidence and confidence, pruning of items no longer present
+- [x] Overview dashboard with real data, empty/loading/error/permission states
+- [x] Discovery UI: tabs, full-text search, filters, sorting, detail panel with evidence and relationships
+- [x] Settings: folders, scans, scan history with issues, audit log; Privacy page
+- [x] Headless CLI for verification
+- [ ] Windows: adapter skeleton exists and is wired into CI; **not yet compiled or run on Windows**
+- [ ] Yarn global inventory (reported as "not supported yet")
+- [x] Unsigned release `.app` built and run on macOS 15 / Apple Silicon (scan → store → display verified)
+- [ ] `.dmg` packaging: needs the terminal to have Automation permission for Finder; bundle target is `app` until then
+- [ ] Release build verified on a second machine; signing and notarisation
+
+## Phase 2: Intelligence graph
+
+- [ ] `graph` crate over the existing entity/relationship tables
+- [ ] Manifest and lockfile parsing (project → dependency)
+- [ ] Runtime requirements (`.nvmrc`, `engines`, `rust-toolchain`, `.python-version`, `requires-python`)
+- [ ] Graph view (React Flow), traversal, search and filters
+- [ ] "What depends on X?" queries with evidence
+
+## Phase 3: AI ecosystem
+
+- [ ] AI coding assistant discovery by executable, app bundle and config directory evidence
+- [ ] Provider configuration discovery (presence only; secret values are never read into storage)
+- [ ] Local inference engines and models (Ollama, LM Studio, …)
+- [ ] Instruction files (AGENTS.md, CLAUDE.md, GEMINI.md, `.cursor/rules`, …): indexing, duplicates, overlaps
+- [ ] MCP server configuration discovery
+- [ ] AI ecosystem dashboard
+
+## Phase 4: System operations
+
+- [ ] Process manager (graceful stop; force only with confirmation; protected processes)
+- [ ] Listening ports
+- [ ] Disk analysis by category
+- [ ] Cleanup candidates with dry-run, Trash-based removal, verification and audit
+- [ ] Docker resources and safe Docker cleanup (volumes never removed automatically)
+
+## Phase 5: Advanced intelligence
+
+- [ ] Change impact simulator
+- [ ] Safe Update Lab (git worktrees; scripts only with approval)
+- [ ] Environment snapshots and comparison
+- [ ] Security and lifecycle data (OSV and others; network use opt-in)
+
+## Phase 6: AI operator and platforms
+
+- [ ] Provider-agnostic AI interface (local and opt-in cloud)
+- [ ] Typed, permissioned action registry; approval flow; verification
+- [ ] Full Windows adapter (apps, WinGet, Scoop, Chocolatey, services)
+- [ ] Linux adapter

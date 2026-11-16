@@ -1,0 +1,40 @@
+name: Bug report
+description: Something AGASTHY shows or does is wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not paste secrets, tokens or private paths you would not want public. For security issues, see SECURITY.md instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you see, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What the machine actually has
+      description: For wrong discovery data, the output of the equivalent command (for example `git status`, `brew list`, `node --version`).
+  - type: input
+    id: version
+    attributes:
+      label: AGASTHY version
+      description: Settings → About this build
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and architecture
+      placeholder: macOS 15.6, Apple Silicon
+    validations:
+      required: true

@@ -1,0 +1,25 @@
+{
+  "name": "agasthy",
+  "private": true,
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.17.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @agasthy/desktop tauri dev",
+    "build": "pnpm --filter @agasthy/desktop tauri build",
+    "tauri": "pnpm --filter @agasthy/desktop tauri",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "e2e": "pnpm --filter @agasthy/desktop e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "gen:types": "node scripts/gen-types.mjs",
+    "check:types": "node scripts/gen-types.mjs --check"
+  },
+  "devDependencies": {
+    "prettier": "3.10.1"
+  }
+}

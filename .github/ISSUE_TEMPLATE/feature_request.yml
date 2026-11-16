@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest something AGASTHY should discover, explain or do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What question about your machine can't you answer today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should AGASTHY do? What evidence would it use?
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety considerations
+      description: Does this read anything sensitive or change the machine? How should it be gated?
