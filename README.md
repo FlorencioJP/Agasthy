@@ -4,14 +4,41 @@
 
 <h1 align="center">AGASTHY</h1>
 
-<p align="center"><strong>Your developer machine. One intelligence layer.</strong><br/>
-Discover · Understand · Connect · Optimize · Operate</p>
+<p align="center"><strong>Mission control for your Mac when you build with AI coding agents.</strong></p>
+
+<p align="center">
+See every agent you have running and what it costs. Catch what agents leave running after they exit.<br/>
+Free disk space without breaking anything. Ask plain questions about your machine and get answers with evidence.
+</p>
+
+<p align="center">
+  <a href="https://github.com/HMAKT99/Agasthy/releases/latest"><strong>Download for Mac (Apple silicon)</strong></a> ·
+  free and open source · no account · no telemetry
+</p>
 
 ---
 
-AGASTHY is an open-source, local-first desktop application that discovers what is on a developer's machine, works out how the pieces relate, and explains it with evidence.
+## Why you'll want it
 
-> **Status: early development (v0.1.0, Phase 5).** It runs on macOS. It has not been published or released, and nothing here is offered as a download yet.
+You run Claude Code in three terminals, Codex in another, Cursor on the side. Each one starts MCP servers, dev servers and watchers. A week later your Mac is swapping, your disk is full of `node_modules` and `target` folders, port 3000 is "already in use", and you have no idea what the agents actually spent. **AGASTHY shows you all of it in one place, and fixes it safely.**
+
+| | |
+|---|---|
+| 🤖 **Every coding agent, live** | Claude Code, Codex, Gemini CLI, Cursor Agent, Aider, Hermes Agent, OpenClaw and more, plus anything that starts MCP servers. For each session: memory, CPU, ports, MCP and dev servers, and the folder it works in. |
+| 🧹 **What agents leave behind** | When an agent exits but its dev server or MCP server keeps running, AGASTHY tells you which session started it and stops it in one reviewed step. |
+| 🪙 **What your agents cost** | Tokens, requests and estimated cost per day, session, project and model, read from Claude Code, Codex and Hermes logs on your Mac. Counters only, never your prompts. |
+| 💾 **Free disk space safely** | Finds rebuildable `node_modules`, `target`, virtualenvs, build output and caches. It only offers folders Git ignores and that contain no tracked files, and moves them to a quarantine you can restore from. |
+| 💬 **Ask your machine** | "What is using my RAM?" · "Free 10 GB safely" · "Which repos haven't I touched in 90 days?" · "What breaks if I remove openssl@3?" Works with no AI model at all; optionally connect a local model (Ollama, LM Studio) or a cloud one. |
+| 🧭 **Insights + menu bar** | A ranked list of what needs attention (low disk, swap pressure, token spikes, stale data, security findings), always one click away in the menu bar. |
+| 🕸️ **Know what depends on what** | Projects, runtimes, packages, tools and AI configuration in one graph. Simulate removing anything before you do it. |
+
+## Built to be trusted
+
+- **Local-first.** Everything stays in one SQLite file on your Mac. No account, no telemetry, no analytics.
+- **Nothing changes without you.** Every action is a dry run first, shows exact targets and sizes, needs your confirmation, is checked afterwards and written to an audit log.
+- **Hard limits.** It never uses `sudo`, never deletes Git repositories or tracked files, never touches Docker volumes, and never stops system or other users' processes. The AI can only *propose* actions; it cannot run commands.
+- **Evidence, not guesses.** Every fact carries its source and a confidence level. Anything it cannot measure is shown as *unavailable*, never as 0.
+- **Light.** About 0.4% CPU and under 100 MB for the app process in normal use; a 13 MB app.
 
 ## Install (macOS, Apple silicon)
 
