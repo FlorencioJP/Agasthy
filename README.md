@@ -97,6 +97,15 @@ Setup for each client: [integrations/mcp](integrations/mcp).
 
 **macOS (Apple silicon, macOS 12+)**
 
+With [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask hmakt99/tap/agasthy     # the app
+brew install hmakt99/tap/agasthy-cli        # optional: the read-only CLI and MCP server for agents
+```
+
+Or by hand:
+
 1. Download `AGASTHY-…-apple-silicon.dmg` from [Releases](https://github.com/HMAKT99/Agasthy/releases).
 2. Drag **AGASTHY** to **Applications**.
 3. First launch: macOS says it cannot verify the developer (AGASTHY is not notarized by Apple yet). Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. You only do this once.
