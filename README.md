@@ -92,9 +92,6 @@ AGASTHY lives in the menu bar: closing the window keeps it running, and **Quit**
 
 ## Everything it does
 
-<details>
-<summary>Full feature list</summary>
-
 | Area | What AGASTHY does |
 |---|---|
 | **Live resources** | CPU (total and per core), memory, swap, disk per volume, load average, process count, top processes by memory and CPU, GPU model. Anything it cannot measure is shown as *unavailable* with a reason, never as 0. |
@@ -123,8 +120,6 @@ Repositories, installed packages, binaries on PATH and applications are kept as 
 
 
 Repositories, installed packages, binaries on PATH and applications are kept as **separate kinds**. A local clone is never treated as installed software. Open items are in [ROADMAP.md](ROADMAP.md).
-
-</details>
 
 ## Under the hood
 
