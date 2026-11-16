@@ -16,7 +16,9 @@ agasthy-platform ─────────┤  OS adapters + CommandRunner
 agasthy-provenance ───────┤  remote parsing, redaction, confidence rules
 agasthy-system-monitor ───┤  telemetry (sysinfo)
 agasthy-discovery ────────┤  repositories, manifests, software, packages → IngestBatch
-agasthy-graph ────────────┘  views, shared dependencies, impact analysis (reads the Store)
+agasthy-graph ────────────┤  views, shared dependencies, impact analysis (reads the Store)
+agasthy-actions ──────────┤  typed action engine: plan → confirm → re-validate → verify → audit
+agasthy-ai ───────────────┘  AI Operator: tools, built-in router, provider loop (OpenAI-compatible, Anthropic)
         │
         ├── agasthy-cli       headless JSON output
         └── agasthy-desktop   Tauri commands → React UI
@@ -95,9 +97,13 @@ Action types: `TerminateProcess { pid, start_time, force }`, `QuarantinePaths`, 
 
 **Secrets.** Credentials in remote URLs (`https://user:token@…`, query strings) are removed before storage or display.
 
+## AI Operator
+
+`crates/ai-engine` defines the Operator's tools (`TOOLS`: JSON schemas), the `ToolHost` trait, a deterministic built-in router, and the provider loop. The desktop app implements `ToolHost` (`apps/desktop/src-tauri/src/operator.rs`) over the Store, process monitor, disk analysis and Docker usage, shortening home paths to `~` and dropping instruction-file text. `propose_action` builds an `ActionRequest` and dry-runs it with the action engine to describe it; the UI opens proposals in `ActionDialog`, which plans again and needs confirmation. The model never sees a confirmation token.
+
 ## Adding a platform
 
-Implement `SystemPaths`, `AppInventory`, `ProbePolicy` and `Platform` in `crates/platform-adapters/src/<os>/`, and select it in `current()`. Return `Availability::Unsupported` for anything not yet implemented, so the UI says so instead of showing an empty list.
+Implement `SystemPaths`, `AppInventory`, `ProbePolicy` and `Platform` in `crates/platform-adapters/src/<os>/`, and select it in `current()`. The Windows and Linux modules compile on every OS so their parsers are tested on any machine; keep OS-specific system calls behind commands run through the guarded runner. Return `Availability::Unsupported` for anything not yet implemented, so the UI says so instead of showing an empty list.
 
 ## Frontend
 

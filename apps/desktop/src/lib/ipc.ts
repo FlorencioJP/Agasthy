@@ -1,4 +1,8 @@
 import type {
+  ChatTurn,
+  OperatorAnswer,
+  OperatorSettings,
+  ProviderConfig,
   Lab,
   ReconstructionPlan,
   RemovalImpact,
@@ -95,6 +99,15 @@ export const api = {
   securitySettings: () => invoke<SecuritySettings>("security_settings"),
   setOsvEnabled: (enabled: boolean) => invoke<void>("set_osv_enabled", { enabled }),
   labsList: () => invoke<Lab[]>("labs_list"),
+  operatorSettings: () => invoke<OperatorSettings>("operator_settings"),
+  /** `null` turns the model off; the built-in Operator still answers. */
+  operatorSetProvider: (provider: ProviderConfig | null) => invoke<void>("operator_set_provider", { provider }),
+  /** Stored in the OS credential store (Keychain), never in AGASTHY's database. */
+  operatorSetKey: (preset: string, key: string) => invoke<void>("operator_set_key", { preset, key }),
+  operatorDeleteKey: (preset: string) => invoke<void>("operator_delete_key", { preset }),
+  operatorSetCloudConsent: (enabled: boolean) => invoke<void>("operator_set_cloud_consent", { enabled }),
+  operatorAsk: (question: string, history: ChatTurn[], useModel: boolean) =>
+    invoke<OperatorAnswer>("operator_ask", { question, history, useModel }),
 };
 
 export async function onScanEvent(handler: (e: ScanEvent) => void): Promise<() => void> {

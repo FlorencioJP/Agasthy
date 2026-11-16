@@ -4,19 +4,19 @@
 //! product logic (discovery, persistence, UI) only sees these traits, so adding
 //! an OS means implementing them, not forking the product.
 //!
-//! * macOS: implemented.
-//! * Windows, Linux: compile, and return [`Availability::Unsupported`] where
-//!   an adapter is not implemented yet. They never pretend to have found nothing.
+//! * macOS: implemented and validated.
+//! * Windows, Linux: implemented and unit-tested against recorded output, not
+//!   yet validated on real hardware. Their modules compile (and their tests
+//!   run) on every OS; [`current`] picks the one for the running OS. Anything
+//!   still missing returns [`Availability::Unsupported`], never an empty result.
 
 pub mod command;
 pub mod types;
 
-#[cfg(target_os = "linux")]
-mod linux;
+pub mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
-#[cfg(target_os = "windows")]
-mod windows;
+pub mod windows;
 
 mod common;
 
@@ -123,6 +123,16 @@ pub fn system_runner(platform: &dyn Platform, extra_allowed: &[&str]) -> SystemC
         .collect();
     let mut allow: Vec<&str> = DEFAULT_COMMAND_ALLOWLIST.to_vec();
     allow.extend_from_slice(extra_allowed);
+    // This OS's package managers (read-only inventory commands only).
+    for m in platform.supported_package_managers() {
+        if m.inventory_implemented {
+            allow.push(m.id.binary());
+        }
+    }
+    if platform.info().os == "windows" {
+        // Listening ports: `netstat -ano` (read-only).
+        allow.push("netstat");
+    }
     let suffixes = platform
         .executable_file_names("x")
         .into_iter()

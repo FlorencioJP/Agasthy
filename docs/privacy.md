@@ -4,7 +4,11 @@ This describes AGASTHY v0.1.0. The in-app **Privacy** page shows the live values
 
 ## Transmits
 
-- **Nothing to the internet by default.** AGASTHY makes no internet requests of its own: no account, telemetry, analytics, crash reporting or update checks. Cloud AI providers are never contacted.
+- **Nothing to the internet by default.** AGASTHY makes no internet requests of its own: no account, telemetry, analytics, crash reporting or update checks. Cloud AI providers are contacted only if you configure one *and* turn on cloud models (below).
+- **AI Operator.** The built-in Operator uses no model and sends nothing. If you configure a model in Settings → AI model:
+  - A **local** endpoint (`127.0.0.1` / `localhost`, e.g. Ollama or LM Studio) receives your question and the Operator's tool results on this machine.
+  - A **cloud** endpoint requires a separate switch, *Allow sending machine data to a cloud model*, which is off by default. With it on, the endpoint receives your question, the conversation so far in this session, and tool results: process names, PIDs and memory/CPU figures, item names and versions, paths with your home folder shown as `~`, sizes, counts, MCP server names and transports, finding titles. It never receives AI instruction-file text, environment variable values, API keys or file contents.
+  - Requests go through `curl` with the request body and headers in owner-only temporary files that are deleted afterwards, so keys never appear on a command line. Every question is written to the audit log with the provider, the number of tool calls and where the data went.
 - **Optional: OSV.dev advisory checks (off by default).** If you turn this on (Security page), each security check sends package *name, ecosystem and version* triples to `https://api.osv.dev` with `curl`, and fetches advisory details by ID. No paths, project names, hostnames or credentials are sent. The Security page shows exactly what would be sent before you enable it, and each check is written to the audit log with the number of versions sent.
 - **Update Lab steps you approve** run `npm`, `pnpm` or `cargo` in the lab copy; installs download packages from those registries, and test runs execute the project's own test command.
 - **Local ports, for local AI engines only.** When an installed local inference engine is found (Ollama 11434, LM Studio 1234, Jan 1337, vLLM 8000, LocalAI 8080), the AI scan opens and closes a TCP connection to that port on `127.0.0.1` to see if it is running. No data is sent.
@@ -26,6 +30,8 @@ AGASTHY never scans your whole disk. Repository discovery only looks inside fold
 
 ## Stores
 
+API keys for AI providers are stored only in the operating system's credential store (macOS Keychain, Windows Credential Manager, the Linux kernel keyring), under the service `org.agasthy.desktop`. They are never written to AGASTHY's database, logs or files. The chosen provider, endpoint and model are stored in the database.
+
 A single SQLite database:
 
 - macOS: `~/Library/Application Support/org.agasthy.desktop/agasthy.db`
@@ -36,7 +42,7 @@ It contains scan results with their evidence, your folder list, scan history and
 
 Only allowlisted programs, with fixed arguments, never through a shell: `git`, `brew`, `npm`, `pnpm`, `uv`, `python3` (for `pip list`), `cargo`, `system_profiler`, and the catalogued developer tools, which are run only with their version argument. Shells and privilege-escalation tools are always refused. AGASTHY never uses `sudo`.
 
-Also `curl` (OSV.dev only, when enabled; fixed HTTPS URL), `lsof` (to list listening TCP ports) and `docker` (`system df`, `images --filter dangling=true --quiet`, and, only after you confirm, `builder prune --force` or `image prune --force`).
+Also `curl` (OSV.dev when enabled, and the AI model endpoint you configure), `lsof` (to list listening TCP ports) and `docker` (`system df`, `images --filter dangling=true --quiet`, and, only after you confirm, `builder prune --force` or `image prune --force`).
 
 ## Changes
 

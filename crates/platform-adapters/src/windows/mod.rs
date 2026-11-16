@@ -1,8 +1,12 @@
-//! Windows adapter (skeleton).
+//! Windows adapter (unvalidated).
 //!
-//! Path resolution is implemented. Application inventory, GPU information and
-//! WinGet / Scoop / Chocolatey inventory return `Unsupported` until they are
-//! implemented and validated on Windows hardware.
+//! Implemented and unit-tested against recorded output, not yet run on
+//! Windows hardware: path resolution, application inventory (registry
+//! Uninstall keys via `reg query`), Scoop and Chocolatey inventory, and
+//! listening ports (`netstat`). GPU information and WinGet inventory return
+//! `Unsupported`: WinGet only prints a localized table.
+
+pub mod apps;
 
 use std::path::Path;
 
@@ -13,6 +17,7 @@ use crate::common::{process_path_dirs, push_well_known_user_dirs};
 use crate::types::*;
 use crate::{AppInventory, AppScan, Platform, ProbePolicy, SystemPaths};
 
+#[derive(Default)]
 pub struct Windows;
 
 impl Windows {
@@ -52,13 +57,14 @@ impl SystemPaths for Windows {
 
 impl AppInventory for Windows {
     fn list_applications(&self) -> AppScan {
+        let (found, failed) = apps::read_all(&apps::registry_runner());
+        let issues = failed
+            .into_iter()
+            .map(|f| ScanIssue::new(IssueKind::CommandFailed, "applications", f))
+            .collect();
         AppScan {
-            apps: Availability::unsupported("windows"),
-            issues: vec![ScanIssue::new(
-                IssueKind::Unsupported,
-                "applications",
-                "Windows application inventory is not implemented in this build",
-            )],
+            apps: Availability::available(found),
+            issues,
         }
     }
 }
@@ -84,26 +90,22 @@ impl Platform for Windows {
             os: "windows".into(),
             os_version: None,
             arch: std::env::consts::ARCH.into(),
-            support_level: SupportLevel::Skeleton,
+            support_level: SupportLevel::Unvalidated,
         }
     }
 
     fn supported_package_managers(&self) -> Vec<PackageManagerSupport> {
         use PackageManagerId::*;
-        [Npm, Pnpm, Uv, Cargo]
+        [Npm, Pnpm, Uv, Cargo, Scoop, Chocolatey]
             .into_iter()
             .map(|id| PackageManagerSupport {
                 id,
                 inventory_implemented: true,
             })
-            .chain(
-                [Winget, Scoop, Chocolatey, Yarn]
-                    .into_iter()
-                    .map(|id| PackageManagerSupport {
-                        id,
-                        inventory_implemented: false,
-                    }),
-            )
+            .chain([Winget, Yarn].into_iter().map(|id| PackageManagerSupport {
+                id,
+                inventory_implemented: false,
+            }))
             .collect()
     }
 

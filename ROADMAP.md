@@ -65,7 +65,7 @@ A box is ticked only when the item is implemented **and** verified. Anything par
 - [x] AI Ecosystem page with question shortcuts; AI view in the Machine Graph
 - [ ] Windows and Linux locations for the same tools
 - [ ] JetBrains AI Assistant and other IDE plugins
-- [ ] Natural-language questions (Phase 6, AI operator)
+- [x] Natural-language questions (Phase 6, AI Operator)
 
 ## Phase 4: System operations
 
@@ -78,7 +78,8 @@ A box is ticked only when the item is implemented **and** verified. Anything par
 - [ ] macOS Trash integration ("Put Back") as an alternative to AGASTHY's quarantine
 - [ ] Cleanup across volumes
 - [ ] Restarting services (launchd, brew services) and opening a terminal at a process location
-- [ ] Windows process ownership and port listing
+- [x] Windows port listing (`netstat -ano`; unvalidated on hardware)
+- [ ] Windows process ownership
 
 ## Phase 5: Advanced intelligence
 
@@ -92,7 +93,12 @@ A box is ticked only when the item is implemented **and** verified. Anything par
 
 ## Phase 6: AI operator and platforms
 
-- [ ] Provider-agnostic AI interface (local and opt-in cloud)
-- [ ] Typed, permissioned action registry; approval flow; verification
-- [ ] Full Windows adapter (apps, WinGet, Scoop, Chocolatey, services)
-- [ ] Linux adapter
+- [x] AI Operator: built-in deterministic mode (no model, nothing sent) for common questions
+- [x] Provider-agnostic model mode: OpenAI-compatible endpoints (Ollama, LM Studio, vLLM, LocalAI, OpenAI, Gemini, OpenRouter, custom) and Anthropic; tool-calling loop over 12 typed tools
+- [x] The model can only read through typed tools and propose actions; proposals go through the existing dry-run → confirm → verify → audit flow; it cannot execute anything
+- [x] Cloud models need a separate opt-in; API keys in the OS credential store; home paths shown as `~`; instruction-file text never sent; every question audited with where its data went
+- [x] Windows adapter: application inventory from registry Uninstall keys (`reg query`), Scoop and Chocolatey 2.x inventory, listening ports; unit-tested against recorded output
+- [x] Linux adapter: `.desktop` application inventory (including Flatpak and Snap exports), Flatpak and Snap package inventory; unit-tested
+- [ ] Validate the Windows and Linux adapters on real hardware (status stays "unvalidated" until then)
+- [ ] WinGet inventory (its `list` output is a localized table), Windows services, GPU information on Windows and Linux
+- [ ] Streaming Operator answers; conversation history beyond the current session

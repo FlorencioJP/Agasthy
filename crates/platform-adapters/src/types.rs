@@ -20,6 +20,9 @@ pub struct PlatformInfo {
 pub enum SupportLevel {
     /// Adapters implemented and exercised on real hardware.
     Implemented,
+    /// Adapters implemented and unit-tested against recorded output, but not
+    /// yet exercised on real hardware for this OS.
+    Unvalidated,
     /// Builds and runs; most adapters return "unsupported".
     Skeleton,
 }
@@ -90,6 +93,8 @@ pub enum PackageManagerId {
     Winget,
     Scoop,
     Chocolatey,
+    Flatpak,
+    Snap,
 }
 
 impl PackageManagerId {
@@ -105,6 +110,8 @@ impl PackageManagerId {
             PackageManagerId::Winget => "winget",
             PackageManagerId::Scoop => "scoop",
             PackageManagerId::Chocolatey => "chocolatey",
+            PackageManagerId::Flatpak => "flatpak",
+            PackageManagerId::Snap => "snap",
         }
     }
 
@@ -120,6 +127,8 @@ impl PackageManagerId {
             PackageManagerId::Winget => "WinGet",
             PackageManagerId::Scoop => "Scoop",
             PackageManagerId::Chocolatey => "Chocolatey",
+            PackageManagerId::Flatpak => "Flatpak",
+            PackageManagerId::Snap => "Snap",
         }
     }
 
@@ -136,6 +145,8 @@ impl PackageManagerId {
             PackageManagerId::Winget => "winget",
             PackageManagerId::Scoop => "scoop",
             PackageManagerId::Chocolatey => "choco",
+            PackageManagerId::Flatpak => "flatpak",
+            PackageManagerId::Snap => "snap",
         }
     }
 }

@@ -39,13 +39,14 @@ AGASTHY reads the machine directly and keeps what it finds, plus the evidence be
 | **Safe Update Lab** | Try a dependency update (npm, pnpm, Cargo) in a separate Git worktree. Install and test steps run only when you approve them (install scripts off by default), and results are copied back only on request. |
 | **Snapshots** | Record installed software, repositories (commit, branch, remote) and environment variable names; compare snapshots; list the commands that would bring back what is missing. Metadata only, not a backup. |
 | **Security & lifecycle** | Outdated Homebrew packages, tools of unknown origin, and, if you opt in, OSV.dev advisories for npm, PyPI, crates.io and Go packages with exact versions. |
+| **AI Operator** | Ask questions in plain language: *what is using my RAM*, *free 10 GB safely*, *which repos have I not touched in 90 days*, *which MCP servers are configured*, *what breaks if I remove openssl@3*. A built-in mode answers common questions with no AI model and sends nothing anywhere. Optionally connect a local model (Ollama, LM Studio, vLLM, LocalAI) or, after a separate opt-in, a cloud model (Anthropic, OpenAI, Gemini, OpenRouter, any OpenAI-compatible endpoint). The model can only read through AGASTHY's typed tools and *propose* changes; every proposal opens the same dry-run review as the rest of the app. |
 | **Audit & privacy** | An append-only audit log of every action, and a privacy page listing exactly which programs AGASTHY may run. |
 
 Repositories, installed packages, binaries on PATH and applications are kept as **separate kinds**. A local clone is never treated as installed software.
 
 ### Not built yet
 
-Planned, but **not** in this build: the AI operator. See [ROADMAP.md](ROADMAP.md). The app's sidebar shows only the sections that work.
+Open items are listed in [ROADMAP.md](ROADMAP.md), notably validating the Windows and Linux adapters on real hardware. The app's sidebar shows only the sections that work.
 
 ## Screenshots
 
@@ -57,8 +58,8 @@ No screenshots are included yet. Screenshots of a real machine show its hostname
 |---|---|
 | macOS 12+ (Apple Silicon) | Implemented and tested on macOS 15 / M2. |
 | macOS (Intel) | Expected to work; not yet tested. |
-| Windows 11 | Architecture in place; adapters are a skeleton that report "unsupported". Not built or tested on Windows yet; CI is configured to check it. |
-| Linux | Skeleton adapter; same status as Windows. |
+| Windows 11 | **Unvalidated.** Adapters implemented and unit-tested against recorded output (applications from the registry, Scoop, Chocolatey 2.x, npm/pnpm/uv/cargo, listening ports), but not yet built or run on Windows. WinGet inventory and GPU information report "unsupported". CI is configured to check it. |
+| Linux | **Unvalidated.** `.desktop` applications (including Flatpak and Snap), Flatpak and Snap packages, Homebrew/npm/pnpm/uv/pip/cargo, listening ports via `lsof`; unit-tested, not yet run on Linux. GPU information reports "unsupported". |
 
 ## Architecture
 

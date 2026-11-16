@@ -26,12 +26,19 @@ export function PrivacyPage() {
               If you turn this on in Security, each check sends package name, ecosystem and version triples to api.osv.dev. Nothing else. The Security page
               shows exactly what would be sent first.
             </Item>
-            <Item title="AGASTHY makes no internet requests in this build.">
+            <Item title="Optional: an AI model for the Operator (off by default).">
+              The built-in Operator uses no model and sends nothing. If you set up a model in Settings, a local endpoint (127.0.0.1) receives your question and
+              tool results on this machine. A cloud endpoint additionally needs the &ldquo;Allow sending machine data to a cloud model&rdquo; switch; it then receives
+              the question, this session&rsquo;s conversation and tool results (process names, item names and versions, paths with your home folder as ~, sizes,
+              counts). Never instruction-file text, environment values, keys or file contents. API keys stay in the system credential store. Each question is in
+              the audit log with where its data went.
+            </Item>
+            <Item title="Otherwise, AGASTHY makes no internet requests.">
               No account, no telemetry, no analytics, no update checks. Nothing about your machine, your code or your configuration is uploaded.
             </Item>
             <Item title="Local ports only, for local AI engines.">
               When an installed local inference engine is found (Ollama, LM Studio, Jan, vLLM, LocalAI), the AI scan opens a TCP connection to its port on{" "}
-              <code className="font-mono">127.0.0.1</code> to see whether it is running, then closes it. No data is sent. Cloud providers are never contacted.
+              <code className="font-mono">127.0.0.1</code> to see whether it is running, then closes it. No data is sent.
             </Item>
             <Item title="Tools it runs may use their own caches.">
               AGASTHY runs package managers to list what they installed. It sets opt-outs such as <code className="font-mono">HOMEBREW_NO_AUTO_UPDATE</code>,{" "}

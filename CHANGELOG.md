@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added (Phase 6)
+- AI Operator page: a built-in mode that answers common questions with no model, and an optional model mode with a tool-calling loop over typed, read-only tools.
+- Providers: Ollama, LM Studio, vLLM, LocalAI, OpenAI, Google Gemini, OpenRouter and custom OpenAI-compatible endpoints, and Anthropic (Messages API). Keys stored in the OS credential store; cloud models need an explicit opt-in.
+- Proposals from the Operator (stop a process, quarantine cleanup candidates, prune Docker) open the existing dry-run review; the Operator cannot execute anything.
+- Settings → AI model panel; operator questions recorded in the audit log with where data was sent.
+- Windows adapter: registry application inventory, Scoop and Chocolatey 2.x packages, listening ports via `netstat`. Linux adapter: `.desktop` applications, Flatpak and Snap packages. Both unit-tested; reported as "unvalidated" until run on real hardware.
+
 ### Added (Phase 5)
 - Impact Analysis: removal simulation for any entity, Homebrew dependents from installed runtime dependencies, runtime and project impact.
 - Safe Update Lab: Git worktree labs with approved install/test steps and guarded apply.

@@ -22,7 +22,7 @@ test.describe("with the fixture backend", () => {
     await expect(nav.getByRole("link", { name: "AI Ecosystem" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Processes" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Security" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "AI Operator" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "AI Operator" })).toBeVisible();
 
     await expect(page.getByRole("meter", { name: "CPU" })).toHaveAttribute("aria-valuetext", "unavailable");
     await expect(page.getByRole("meter", { name: "Memory" })).toHaveAttribute("aria-valuenow", "25");
@@ -48,7 +48,8 @@ test.describe("with the fixture backend", () => {
 
   test("privacy page lists the command allowlist from the backend", async ({ page }) => {
     await page.goto("/#/privacy");
-    await expect(page.getByText("AGASTHY makes no internet requests in this build.")).toBeVisible();
+    await expect(page.getByText("Otherwise, AGASTHY makes no internet requests.")).toBeVisible();
+    await expect(page.getByText("Optional: an AI model for the Operator (off by default).")).toBeVisible();
     await expect(page.getByRole("list", { name: "Command allowlist" }).getByRole("listitem")).toHaveText(["git"]);
   });
 
@@ -121,6 +122,29 @@ test.describe("with the fixture backend", () => {
     await expect(toggle).not.toBeChecked();
     await page.getByRole("button", { name: "Show exactly what would be sent" }).click();
     await expect(page.getByText("npm  fixture-pkg@1.0.0")).toBeVisible();
+  });
+
+  test("operator answers locally and routes proposals through the dry-run review", async ({ page }) => {
+    await page.goto("/#/operator");
+    await expect(page.getByText("Built-in Operator.", { exact: false })).toBeVisible();
+    await expect(page.getByRole("radio", { name: "Model" })).toBeDisabled();
+    await page.getByRole("button", { name: "Free 10 GB safely" }).click();
+    await expect(page.getByText("nothing sent off this machine")).toBeVisible();
+    await page.getByRole("button", { name: "1 lookup" }).click();
+    await expect(page.getByText("Disk analysis")).toBeVisible();
+    await page.getByRole("button", { name: "Review" }).click();
+    const dialog = page.getByRole("dialog", { name: "Review action" });
+    await expect(dialog.getByText("Dry run only so far. Nothing has changed.", { exact: false })).toBeVisible();
+  });
+
+  test("cloud models need an explicit opt-in and keys go to the credential store", async ({ page }) => {
+    await page.goto("/#/settings");
+    await expect(page.getByRole("checkbox", { name: /Allow sending machine data to a cloud model/ })).not.toBeChecked();
+    await page.getByLabel("Provider").selectOption("anthropic");
+    await expect(page.getByText("in the cloud")).toBeVisible();
+    await expect(page.getByText("Stored in the operating system", { exact: false })).toBeVisible();
+    await page.getByLabel("Provider").selectOption("ollama");
+    await expect(page.getByText("on this machine")).toBeVisible();
   });
 
   test("snapshots list what is missing as commands, never values", async ({ page }) => {

@@ -6,6 +6,7 @@
 
 mod commands;
 mod intel;
+mod operator;
 mod ops;
 mod state;
 
@@ -13,6 +14,7 @@ use tauri::Manager;
 
 pub use commands::{AppInfo, Overview, ScanEvent, SearchDirInfo};
 pub use intel::SecuritySettings;
+pub use operator::OperatorSettings;
 
 pub fn run() {
     tauri::Builder::default()
@@ -61,6 +63,12 @@ pub fn run() {
             intel::security_settings,
             intel::set_osv_enabled,
             intel::labs_list,
+            operator::operator_settings,
+            operator::operator_set_provider,
+            operator::operator_set_key,
+            operator::operator_delete_key,
+            operator::operator_set_cloud_consent,
+            operator::operator_ask,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AGASTHY");

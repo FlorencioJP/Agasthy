@@ -83,6 +83,24 @@ pub fn inventory_command(id: PackageManagerId) -> Option<CommandSpec> {
         PackageManagerId::Cargo => {
             CommandSpec::new("cargo", &["install", "--list"]).timeout(Duration::from_secs(30))
         }
+        // `scoop export` prints installed apps as JSON; it changes nothing.
+        PackageManagerId::Scoop => {
+            CommandSpec::new("scoop", &["export"]).timeout(Duration::from_secs(60))
+        }
+        // Chocolatey 2.x lists only local packages (1.x would query the
+        // network; it is refused below).
+        PackageManagerId::Chocolatey => {
+            CommandSpec::new("choco", &["list", "--limit-output"]).timeout(Duration::from_secs(60))
+        }
+        PackageManagerId::Flatpak => CommandSpec::new(
+            "flatpak",
+            &["list", "--app", "--columns=application,version,origin"],
+        )
+        .timeout(Duration::from_secs(30)),
+        PackageManagerId::Snap => {
+            CommandSpec::new("snap", &["list", "--unicode=never", "--color=never"])
+                .timeout(Duration::from_secs(30))
+        }
         _ => return None,
     };
     let mut spec = spec;
@@ -112,6 +130,10 @@ pub fn parse_inventory(id: PackageManagerId, stdout: &str) -> Result<Vec<Package
         PackageManagerId::Uv => Ok(parse_uv(stdout)),
         PackageManagerId::Pip => parse_pip(stdout),
         PackageManagerId::Cargo => Ok(parse_cargo(stdout)),
+        PackageManagerId::Scoop => parse_scoop(stdout),
+        PackageManagerId::Chocolatey => Ok(parse_choco(stdout)),
+        PackageManagerId::Flatpak => Ok(parse_flatpak(stdout)),
+        PackageManagerId::Snap => Ok(parse_snap(stdout)),
         other => Err(format!(
             "{} inventory is not implemented",
             other.display_name()
@@ -346,6 +368,108 @@ pub fn parse_cargo(stdout: &str) -> Vec<PackageRecord> {
     out
 }
 
+/// `scoop export`: JSON `{"apps":[{"Name","Version","Source"}]}` (current
+/// Scoop) or text lines `name (v:1.2.3) [bucket]` (older Scoop).
+pub fn parse_scoop(stdout: &str) -> Result<Vec<PackageRecord>, String> {
+    let text = stdout.trim().trim_start_matches('\u{feff}');
+    if text.starts_with('{') {
+        let v: serde_json::Value =
+            serde_json::from_str(text).map_err(|e| format!("invalid JSON from scoop: {e}"))?;
+        let apps = v
+            .get("apps")
+            .and_then(|a| a.as_array())
+            .ok_or("scoop export has no apps list")?;
+        return Ok(apps
+            .iter()
+            .filter_map(|a| {
+                let name = s(a, "Name")?;
+                let mut rec =
+                    PackageRecord::new(PackageManagerId::Scoop, "app", &name, s(a, "Version"));
+                rec.attrs.description = s(a, "Source").map(|b| format!("bucket: {b}"));
+                Some(rec)
+            })
+            .collect());
+    }
+    Ok(text
+        .lines()
+        .filter_map(|l| {
+            let mut parts = l.split_whitespace();
+            let name = parts.next()?;
+            let version = parts
+                .next()
+                .and_then(|v| v.strip_prefix("(v:"))
+                .map(|v| v.trim_end_matches(')').to_string());
+            version
+                .is_some()
+                .then(|| PackageRecord::new(PackageManagerId::Scoop, "app", name, version))
+        })
+        .collect())
+}
+
+/// `choco list --limit-output`: `name|version` per line.
+pub fn parse_choco(stdout: &str) -> Vec<PackageRecord> {
+    stdout
+        .lines()
+        .filter_map(|l| {
+            let (name, version) = l.trim().split_once('|')?;
+            (!name.is_empty()).then(|| {
+                PackageRecord::new(
+                    PackageManagerId::Chocolatey,
+                    "package",
+                    &name.to_lowercase(),
+                    Some(version.trim().to_string()).filter(|v| !v.is_empty()),
+                )
+            })
+        })
+        .collect()
+}
+
+/// `flatpak list --app --columns=application,version,origin`: tab-separated.
+pub fn parse_flatpak(stdout: &str) -> Vec<PackageRecord> {
+    stdout
+        .lines()
+        .filter_map(|l| {
+            let mut cols = l.split('\t').map(str::trim);
+            let app = cols
+                .next()
+                .filter(|a| !a.is_empty() && *a != "Application ID")?;
+            let version = cols.next().filter(|v| !v.is_empty()).map(str::to_string);
+            let mut rec = PackageRecord::new(PackageManagerId::Flatpak, "app", app, version);
+            rec.attrs.description = cols
+                .next()
+                .filter(|o| !o.is_empty())
+                .map(|o| format!("remote: {o}"));
+            Some(rec)
+        })
+        .collect()
+}
+
+/// `snap list`: whitespace table `Name Version Rev Tracking Publisher Notes`.
+pub fn parse_snap(stdout: &str) -> Vec<PackageRecord> {
+    stdout
+        .lines()
+        .filter(|l| !l.starts_with("Name ") && !l.trim().is_empty())
+        .filter_map(|l| {
+            let mut cols = l.split_whitespace();
+            let name = cols.next()?;
+            let version = cols.next().map(str::to_string);
+            let notes = l.split_whitespace().nth(5).unwrap_or("");
+            let kind =
+                if notes.contains("base") || notes.contains("core") || notes.contains("snapd") {
+                    "base"
+                } else {
+                    "snap"
+                };
+            Some(PackageRecord::new(
+                PackageManagerId::Snap,
+                kind,
+                name,
+                version,
+            ))
+        })
+        .collect()
+}
+
 /// Read every package manager the platform supports and build an ingest batch.
 pub fn scan_packages(
     platform: &dyn Platform,
@@ -410,7 +534,19 @@ pub fn scan_packages(
                     .ok()
                     .and_then(|o| extract_version(&format!("{}\n{}", o.stdout, o.stderr)));
                 let cmd = inventory_command(id).expect("implemented managers have a command");
-                match run_inventory(runner, &cmd, id) {
+                let choco_v1 = id == PackageManagerId::Chocolatey
+                    && version.as_deref().is_some_and(|v| {
+                        v.split('.')
+                            .next()
+                            .and_then(|m| m.parse::<u32>().ok())
+                            .is_some_and(|m| m < 2)
+                    });
+                let result = if choco_v1 {
+                    Err("Chocolatey 1.x lists remote packages by default; AGASTHY only reads Chocolatey 2.x so that no network query is made".to_string())
+                } else {
+                    run_inventory(runner, &cmd, id)
+                };
+                match result {
                     Ok(records) => {
                         attrs.package_count = Some(records.len() as u32);
                         attrs.state = ManagerState::Read {
@@ -703,6 +839,32 @@ mod tests {
         let pip = r#"[{"name":"Requests","version":"2.32.3"},{"name":"pip","version":"25.2"}]"#;
         let r = parse_pip(pip).unwrap();
         assert_eq!(r[0].id, "package:pip:requests");
+    }
+
+    #[test]
+    fn windows_and_linux_manager_parsing() {
+        let json = "\u{feff}{\"buckets\":[],\"apps\":[{\"Name\":\"git\",\"Version\":\"2.45.1\",\"Source\":\"main\"},{\"Name\":\"nodejs-lts\",\"Version\":\"20.14.0\",\"Source\":\"main\"}]}";
+        let r = parse_scoop(json).unwrap();
+        assert_eq!(r.len(), 2);
+        assert_eq!(r[0].id, "package:scoop:git");
+        assert_eq!(r[1].version.as_deref(), Some("20.14.0"));
+        let old = parse_scoop("git (v:2.45.1) [main]\n7zip (v:24.06) [main]\n").unwrap();
+        assert_eq!(old[1].version.as_deref(), Some("24.06"));
+
+        let choco = parse_choco("chocolatey|2.3.0\r\nGit|2.45.1\r\n\r\n");
+        assert_eq!(choco.len(), 2);
+        assert_eq!(choco[1].id, "package:chocolatey:git");
+
+        let fp = parse_flatpak("org.mozilla.firefox\t127.0\tflathub\ndev.zed.Zed\t\tflathub\n");
+        assert_eq!(fp.len(), 2);
+        assert_eq!(fp[1].version, None);
+
+        let snap = parse_snap(
+            "Name    Version   Rev    Tracking       Publisher   Notes\ncore22  20240408  1380   latest/stable  canonical   base\ncode    1.90.0    160    latest/stable  vscode      classic\n",
+        );
+        assert_eq!(snap.len(), 2);
+        assert_eq!(snap[0].attrs.package_kind, "base");
+        assert_eq!(snap[1].name, "code");
     }
 
     #[test]

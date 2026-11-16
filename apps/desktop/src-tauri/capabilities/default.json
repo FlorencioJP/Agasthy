@@ -41,6 +41,12 @@
     "allow-snapshot-reconstruction",
     "allow-security-settings",
     "allow-set-osv-enabled",
-    "allow-labs-list"
+    "allow-labs-list",
+    "allow-operator-settings",
+    "allow-operator-set-provider",
+    "allow-operator-set-key",
+    "allow-operator-delete-key",
+    "allow-operator-set-cloud-consent",
+    "allow-operator-ask"
   ]
 }

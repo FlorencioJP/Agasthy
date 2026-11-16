@@ -297,6 +297,27 @@ export async function installFixtureIpc(page: Page): Promise<void> {
       supported: 1,
       unsupported: 1,
     };
+    responses.operator_settings = {
+      presets: [
+        { id: "ollama", name: "Ollama (local)", kind: "openai_compatible", base_url: "http://127.0.0.1:11434/v1", default_model: "fixture-model", needs_key: false },
+        { id: "anthropic", name: "Anthropic", kind: "anthropic", base_url: "https://api.example.invalid", default_model: "fixture-model", needs_key: true },
+      ],
+      provider: null,
+      provider_is_local: false,
+      has_key: false,
+      cloud_consent: false,
+      suggestions: ["Free 10 GB safely", "What is using my RAM?"],
+    };
+    responses.operator_ask = {
+      answer: "fixture: 1.0 GB of regenerable folders passed the safety checks.",
+      steps: [{ tool: "disk_cleanup_candidates", arguments: {}, summary: "1 candidates", ok: true }],
+      proposals: [
+        { request: { type: "quarantine_paths", paths: ["/fixture/code/fixture-widget/node_modules"] }, title: "Move 1 item to quarantine", can_execute: true, reason: "fixture reason" },
+      ],
+      mode: "builtin",
+      model: null,
+      data_sent_to: null,
+    };
     const byKind: Record<string, unknown[]> = { repository: [repo], ai_tool: [aiTool], ai_config_file: [fileA, fileB] };
     window.__AGASTHY_TEST_IPC__ = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
       if (cmd === "list_entities") {

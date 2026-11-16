@@ -16,7 +16,7 @@ use crate::state::{AppState, Inner};
 
 type CmdResult<T> = Result<T, String>;
 
-fn repositories(inner: &Inner) -> CmdResult<Vec<(String, String, PathBuf, u32)>> {
+pub(crate) fn repositories(inner: &Inner) -> CmdResult<Vec<(String, String, PathBuf, u32)>> {
     let store = inner.store.lock().map_err(|_| "database lock poisoned")?;
     let repos = store
         .list_entities(&EntityQuery {
@@ -39,7 +39,7 @@ fn repositories(inner: &Inner) -> CmdResult<Vec<(String, String, PathBuf, u32)>>
         .collect())
 }
 
-fn scan_roots(inner: &Inner) -> CmdResult<Vec<PathBuf>> {
+pub(crate) fn scan_roots(inner: &Inner) -> CmdResult<Vec<PathBuf>> {
     let store = inner.store.lock().map_err(|_| "database lock poisoned")?;
     Ok(store
         .list_scan_roots()
@@ -50,7 +50,7 @@ fn scan_roots(inner: &Inner) -> CmdResult<Vec<PathBuf>> {
         .collect())
 }
 
-fn home(inner: &Inner) -> CmdResult<PathBuf> {
+pub(crate) fn home(inner: &Inner) -> CmdResult<PathBuf> {
     inner
         .platform
         .home_dir()
@@ -110,7 +110,7 @@ pub fn quarantine_list(state: State<'_, AppState>) -> CmdResult<Vec<QuarantineOp
     Ok(state.0.quarantine.list())
 }
 
-fn context(inner: &Inner) -> CmdResult<ActionContext<'_>> {
+pub(crate) fn context(inner: &Inner) -> CmdResult<ActionContext<'_>> {
     Ok(ActionContext {
         runner: &inner.runner,
         monitor: &inner.processes,

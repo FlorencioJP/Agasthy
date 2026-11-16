@@ -1,14 +1,14 @@
 import { Sidebar, SidebarSection, StateView, Wordmark, sidebarItemClass } from "@agasthy/ui";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Activity, Bot, Boxes, Camera, Gauge, GitCompareArrows, HardDrive, Loader2, Network, Settings, Shield, ShieldAlert } from "lucide-react";
+import { Activity, Bot, Boxes, Camera, Gauge, GitCompareArrows, HardDrive, Loader2, Network, Settings, Shield, ShieldAlert, Sparkles } from "lucide-react";
 import { inDesktopShell } from "../lib/ipc";
 import { useAppInfo } from "../lib/queries";
 import { SCAN_LABELS, useScanActivity } from "./scan-activity";
 
-// Only sections with a working implementation appear here. Later phases add
-// The AI Operator is added when it is built.
+// Only sections with a working implementation appear here.
 const NAV = [
   { to: "/", label: "Overview", icon: Gauge, exact: true },
+  { to: "/operator", label: "AI Operator", icon: Sparkles, exact: false },
   { to: "/discovery", label: "Discovery", icon: Boxes, exact: false },
   { to: "/graph", label: "Machine Graph", icon: Network, exact: false },
   { to: "/ai", label: "AI Ecosystem", icon: Bot, exact: false },

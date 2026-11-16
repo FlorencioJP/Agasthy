@@ -2,6 +2,7 @@ import type { ScanKind } from "@agasthy/shared-types";
 import { Badge, Button, StateView } from "@agasthy/ui";
 import { FolderPlus, RefreshCw, Trash2 } from "lucide-react";
 import { Fragment, useState } from "react";
+import { AiModelPanel } from "../components/ai-model-panel";
 import { Kv, PageHeader, Panel } from "../components/page";
 import { SCAN_LABELS, progressLabel, useScanActivity } from "../components/scan-activity";
 import { formatDateTime, formatNumber, formatRelative, shortenHome } from "../lib/format";
@@ -15,6 +16,7 @@ export function SettingsPage() {
       <div className="flex max-w-5xl flex-col gap-4 p-5">
         <FoldersPanel />
         <ScansPanel />
+        <AiModelPanel />
         <HistoryPanel />
         <AuditPanel />
         <AboutPanel />
@@ -280,7 +282,11 @@ function AboutPanel() {
             ["Platform", `${info.data.platform.os} ${info.data.platform.os_version ?? ""} · ${info.data.platform.arch}`],
             [
               "Platform support",
-              info.data.platform.support_level === "implemented" ? "adapters implemented" : "skeleton: most discovery is not implemented on this OS yet",
+              {
+                implemented: "adapters implemented and validated on this OS",
+                unvalidated: "adapters implemented and unit-tested, not yet validated on real hardware for this OS",
+                skeleton: "skeleton: most discovery is not implemented on this OS yet",
+              }[info.data.platform.support_level],
             ],
             ["Database", <code className="selectable font-mono text-[11.5px]">{info.data.db_path}</code>],
             ["Schema version", info.data.schema_version],

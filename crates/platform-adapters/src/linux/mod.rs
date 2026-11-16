@@ -1,7 +1,11 @@
-//! Linux adapter (skeleton).
+//! Linux adapter (unvalidated).
 //!
-//! Path resolution is implemented. Application inventory (`.desktop` files,
-//! Flatpak, Snap) and GPU information return `Unsupported` for now.
+//! Implemented and unit-tested, not yet run on Linux hardware: path
+//! resolution, application inventory (`.desktop` entries, including Flatpak and
+//! Snap exports), and Flatpak / Snap package inventory. GPU information
+//! returns `Unsupported`.
+
+pub mod apps;
 
 use std::path::{Path, PathBuf};
 
@@ -12,6 +16,7 @@ use crate::common::{process_path_dirs, push_unique, push_well_known_user_dirs};
 use crate::types::*;
 use crate::{AppInventory, AppScan, Platform, ProbePolicy, SystemPaths};
 
+#[derive(Default)]
 pub struct Linux;
 
 impl Linux {
@@ -69,13 +74,13 @@ impl SystemPaths for Linux {
 
 impl AppInventory for Linux {
     fn list_applications(&self) -> AppScan {
+        let (found, failed) = apps::read_all(&apps::entry_dirs(self.home_dir().as_deref()));
         AppScan {
-            apps: Availability::unsupported("linux"),
-            issues: vec![ScanIssue::new(
-                IssueKind::Unsupported,
-                "applications",
-                "Linux application inventory is not implemented in this build",
-            )],
+            apps: Availability::available(found),
+            issues: failed
+                .into_iter()
+                .map(|f| ScanIssue::new(IssueKind::PermissionDenied, "applications", f))
+                .collect(),
         }
     }
 }
@@ -92,13 +97,13 @@ impl Platform for Linux {
             os: "linux".into(),
             os_version: None,
             arch: std::env::consts::ARCH.into(),
-            support_level: SupportLevel::Skeleton,
+            support_level: SupportLevel::Unvalidated,
         }
     }
 
     fn supported_package_managers(&self) -> Vec<PackageManagerSupport> {
         use PackageManagerId::*;
-        [Homebrew, Npm, Pnpm, Uv, Pip, Cargo]
+        [Homebrew, Npm, Pnpm, Uv, Pip, Cargo, Flatpak, Snap]
             .into_iter()
             .map(|id| PackageManagerSupport {
                 id,

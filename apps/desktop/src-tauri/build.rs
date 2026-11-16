@@ -35,6 +35,12 @@ const COMMANDS: &[&str] = &[
     "security_settings",
     "set_osv_enabled",
     "labs_list",
+    "operator_settings",
+    "operator_set_provider",
+    "operator_set_key",
+    "operator_delete_key",
+    "operator_set_cloud_consent",
+    "operator_ask",
 ];
 
 fn main() {

@@ -13,6 +13,7 @@ members = [
   "crates/snapshots",
   "crates/security",
   "crates/update-lab",
+  "crates/ai-engine",
   "crates/cli",
   "apps/desktop/src-tauri",
 ]
@@ -37,6 +38,7 @@ agasthy-actions = { path = "crates/actions" }
 agasthy-snapshots = { path = "crates/snapshots" }
 agasthy-security = { path = "crates/security" }
 agasthy-update-lab = { path = "crates/update-lab" }
+agasthy-ai = { path = "crates/ai-engine" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -51,6 +53,7 @@ dirs = "7"
 plist = "1.10"
 wait-timeout = "0.2"
 sha2 = "0.10"
+keyring = { version = "3.6", features = ["apple-native", "windows-native", "linux-native"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -506,13 +506,25 @@ fn link_project(cwd: Option<&Path>, exe: Option<&Path>, repos: &[RepoRef]) -> Op
     })
 }
 
-/// Listening TCP sockets via `lsof` (macOS/Linux). Only the current user's
+/// Listening TCP sockets via `lsof` (macOS/Linux) or `netstat -ano` (Windows). Only the current user's
 /// processes are visible without administrator rights; that is reported.
 pub fn listening_ports(
     runner: &dyn CommandRunner,
 ) -> (Vec<(u32, ListeningPort)>, Availability<u32>) {
     if cfg!(windows) {
-        return (Vec::new(), Availability::unsupported("windows"));
+        let spec = CommandSpec::new("netstat", &["-ano"]).timeout(Duration::from_secs(10));
+        return match runner.run(&spec) {
+            Ok(o) if o.success() => {
+                let v = parse_netstat(&o.stdout);
+                let n = v.len() as u32;
+                (v, Availability::available(n))
+            }
+            Ok(o) => (
+                Vec::new(),
+                Availability::unavailable(format!("netstat exited with {:?}", o.exit_code)),
+            ),
+            Err(e) => (Vec::new(), Availability::unavailable(e.to_string())),
+        };
     }
     let spec = CommandSpec::new("lsof", &["-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn"])
         .timeout(Duration::from_secs(10));
@@ -529,6 +541,38 @@ pub fn listening_ports(
         ),
         Err(e) => (Vec::new(), Availability::unavailable(e.to_string())),
     }
+}
+
+/// `netstat -ano` (Windows): `  TCP    0.0.0.0:135    0.0.0.0:0    LISTENING    1234`.
+/// The state column is localized on some Windows languages; rows are matched by
+/// a TCP row whose foreign address is the unspecified `*:0`.
+pub fn parse_netstat(out: &str) -> Vec<(u32, ListeningPort)> {
+    let mut v = Vec::new();
+    for line in out.lines() {
+        let cols: Vec<&str> = line.split_whitespace().collect();
+        if cols.len() != 5 || !cols[0].eq_ignore_ascii_case("tcp") {
+            continue;
+        }
+        let foreign_unspecified = cols[2].ends_with(":0");
+        if !(cols[3].eq_ignore_ascii_case("listening") || foreign_unspecified) {
+            continue;
+        }
+        let Some((addr, port)) = cols[1].rsplit_once(':') else {
+            continue;
+        };
+        let (Ok(port), Ok(pid)) = (port.parse::<u16>(), cols[4].parse::<u32>()) else {
+            continue;
+        };
+        let address = addr.trim_matches(['[', ']']).to_string();
+        let lp = ListeningPort { address, port };
+        if !v
+            .iter()
+            .any(|(p, x): &(u32, ListeningPort)| *p == pid && *x == lp)
+        {
+            v.push((pid, lp));
+        }
+    }
+    v
 }
 
 pub fn parse_lsof(out: &str) -> Vec<(u32, ListeningPort)> {
@@ -650,6 +694,24 @@ mod tests {
             classify("syslogd", Some("/usr/sbin/syslogd"), false, true),
             ProcessKind::System
         );
+    }
+
+    #[test]
+    fn netstat_parsing() {
+        let out = "\r\nActive Connections\r\n\r\n  Proto  Local Address          Foreign Address        State           PID\r\n  TCP    0.0.0.0:135            0.0.0.0:0              LISTENING       1180\r\n  TCP    127.0.0.1:3000         0.0.0.0:0              LISTENING       4242\r\n  TCP    192.168.1.5:50000      140.82.112.4:443       ESTABLISHED     900\r\n  TCP    [::]:445               [::]:0                 LISTENING       4\r\n  UDP    0.0.0.0:5353           *:*                                    2000\r\n";
+        let v = parse_netstat(out);
+        assert_eq!(v.len(), 3);
+        assert_eq!(
+            v[1],
+            (
+                4242,
+                ListeningPort {
+                    address: "127.0.0.1".into(),
+                    port: 3000
+                }
+            )
+        );
+        assert_eq!(v[2].1.address, "::");
     }
 
     #[test]
