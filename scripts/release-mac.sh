@@ -66,7 +66,7 @@ if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
     echo "note: DMG signed but not notarized (APPLE_ID, APPLE_PASSWORD and APPLE_TEAM_ID not all set)" >&2
   fi
 else
-  echo "note: unsigned build. Recipients must right-click AGASTHY and choose Open the first time." >&2
+  echo "note: ad-hoc signed (no Developer ID). On first launch macOS asks users to allow it in System Settings > Privacy & Security." >&2
 fi
 
 # The signed update archive, named the way the updater manifest expects.
