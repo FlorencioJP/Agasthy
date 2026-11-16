@@ -20,10 +20,7 @@ free disk space safely, and ask plain questions about your machine with evidence
 </p>
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/agents-dark.png" />
-    <img src="docs/screenshots/agents.png" width="900" alt="AGASTHY Agents page: six coding-agent sessions with memory, MCP servers, dev servers and ports, and three processes left running after their agents exited" />
-  </picture>
+  <img src="docs/media/agasthy-demo.gif" width="900" alt="AGASTHY in one minute: Overview insights, Discovery, Machine Graph, Impact Analysis, AI Ecosystem, Agents, Token Usage, Processes, Storage, AI Operator, the review dialog, Security and Snapshots" />
 </p>
 
 ---
@@ -47,15 +44,16 @@ A developer machine holds hundreds of moving parts: cloned repositories, several
 
 ## Tour
 
-<p align="center"><img src="docs/screenshots/tour.gif" width="900" alt="Tour: Overview insights, Agents, Token Usage, the Operator proposing a cleanup, the review dialog, Machine Graph and Storage" /></p>
-
 | | |
 |---|---|
-| <img src="docs/screenshots/overview.png" alt="Overview with ranked insights" /><br/>**Insights.** What needs attention now, each with one action. | <img src="docs/screenshots/usage.png" alt="Token Usage page" /><br/>**Token Usage.** Tokens and estimated cost by day, project and model. |
-| <img src="docs/screenshots/operator.png" alt="AI Operator answering Clean up after my agents" /><br/>**Ask your machine.** Answers from real data; changes are only proposed. | <img src="docs/screenshots/review.png" alt="Review dialog for stopping three processes" /><br/>**Nothing runs unreviewed.** Every change is a dry run you confirm. |
-| <img src="docs/screenshots/storage.png" alt="Storage and cleanup" /><br/>**Safe cleanup.** Only rebuildable folders Git ignores, into a restorable quarantine. | <img src="docs/screenshots/graph.png" alt="Machine Graph" /><br/>**Machine Graph.** Projects, runtimes and dependencies, and what depends on what. |
+| <img src="docs/screenshots/overview.png" alt="Overview with ranked insights" /><br/>**Overview.** What needs attention now, each with one action. | <img src="docs/screenshots/discovery.png" alt="Discovery: repositories with evidence" /><br/>**Discovery.** Every repo, app, tool and package, with evidence. |
+| <img src="docs/screenshots/graph.png" alt="Machine Graph" /><br/>**Machine Graph.** Projects, runtimes and dependencies, connected. | <img src="docs/screenshots/impact.png" alt="Impact Analysis for openssl@3" /><br/>**Impact Analysis.** What breaks before you remove anything. |
+| <img src="docs/screenshots/ai-instructions.png" alt="AI Ecosystem instruction files" /><br/>**AI Ecosystem.** Tools, MCP servers and instruction files, with conflicts flagged. | <img src="docs/screenshots/agents.png" alt="Agents page" /><br/>**Agents.** Every coding agent, and what it left running. |
+| <img src="docs/screenshots/usage.png" alt="Token Usage page" /><br/>**Token Usage.** Tokens and cost by day, project and model. | <img src="docs/screenshots/processes.png" alt="Processes page" /><br/>**Processes.** Every process with its port and project. |
+| <img src="docs/screenshots/storage.png" alt="Storage and cleanup" /><br/>**Storage & Cleanup.** Rebuildable folders into a restorable quarantine. | <img src="docs/screenshots/security.png" alt="Security findings" /><br/>**Security.** Advisories, outdated and unknown-origin software. |
+| <img src="docs/screenshots/operator.png" alt="AI Operator answering a question" /><br/>**AI Operator.** Ask your machine; changes are only proposed. | <img src="docs/screenshots/review.png" alt="Review dialog" /><br/>**Safe by design.** Every change is a dry run you confirm. |
 
-<sub>Screenshots use a synthetic demo machine (`pnpm screenshots` regenerates them), not real data.</sub>
+<sub>Screenshots and the video use a synthetic demo machine, not real data. `pnpm screenshots` and `pnpm demo:video` regenerate them.</sub>
 
 ## Built to be trusted
 

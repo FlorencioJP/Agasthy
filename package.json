@@ -19,7 +19,8 @@
     "gen:types": "node scripts/gen-types.mjs",
     "check:types": "node scripts/gen-types.mjs --check",
     "release:mac": "bash scripts/release-mac.sh",
-    "screenshots": "pnpm --filter @agasthy/desktop exec playwright test -c playwright.demo.config.ts"
+    "screenshots": "pnpm --filter @agasthy/desktop exec playwright test -c playwright.demo.config.ts",
+    "demo:video": "pnpm screenshots && pnpm --filter @agasthy/demo-video render && pnpm --filter @agasthy/demo-video gif"
   },
   "devDependencies": {
     "prettier": "3.10.1"

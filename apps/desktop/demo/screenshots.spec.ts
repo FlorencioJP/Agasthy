@@ -3,11 +3,11 @@
  *
  *   pnpm screenshots        (from the repository root)
  *
- * Output: docs/screenshots/*.png (framed like a macOS window) and tour.gif.
+ * Output: docs/screenshots/*.png (framed like a macOS window), plus unframed
+ * captures in apps/demo-video/public/shots for the demo video (pnpm demo:video).
  */
 import { type Page, expect, test } from "@playwright/test";
-import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { installDemoIpc } from "./demo-ipc";
@@ -124,19 +124,15 @@ test("capture dark hero", async ({ browser }) => {
   await ctx.close();
 });
 
-test("frame screenshots and build the GIF", async ({ browser }) => {
+test("frame screenshots and keep raw captures for the video", async ({ browser }) => {
   const page = await (await browser.newContext({ deviceScaleFactor: 2 })).newPage();
   for (const n of ["overview", "agents", "agents-expanded", "usage", "operator", "review", "graph", "storage", "discovery", "discovery-tools", "ai-ecosystem", "ai-instructions", "processes", "security", "impact", "snapshots"]) await frame(page, n);
   await frame(page, "agents-dark", true);
 
-  // GIF: a short tour, each step held ~2.2 s, scaled to 1200 px wide with an optimised palette.
-  const tour = ["overview", "agents", "agents-expanded", "usage", "operator", "review", "graph", "storage"];
-  const list = tour.map((n) => `file '${join(out, `${n}.png`)}'\nduration 2.2`).join("\n") + `\nfile '${join(out, `${tour[tour.length - 1]}.png`)}'\n`;
-  const concat = join(raw, "tour.txt");
-  writeFileSync(concat, list);
-  const palette = join(raw, "palette.png");
-  const scale = "fps=10,scale=1200:-1:flags=lanczos";
-  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", concat, "-vf", `${scale},palettegen=max_colors=200:stats_mode=diff`, palette]);
-  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", concat, "-i", palette, "-lavfi", `${scale}[x];[x][1:v]paletteuse=dither=sierra2_4a:diff_mode=rectangle`, "-loop", "0", join(out, "tour.gif")]);
+  // Unframed captures for the demo video (apps/demo-video/public/shots).
+  const shots = join(here, "../../demo-video/public/shots");
+  rmSync(shots, { recursive: true, force: true });
+  mkdirSync(shots, { recursive: true });
+  for (const f of readdirSync(raw).filter((x) => x.endsWith(".png"))) copyFileSync(join(raw, f), join(shots, f));
   rmSync(raw, { recursive: true, force: true });
 });
