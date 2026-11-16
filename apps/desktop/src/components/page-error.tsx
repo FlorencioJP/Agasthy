@@ -1,6 +1,8 @@
 import { Button } from "@agasthy/ui";
 import { type ErrorComponentProps, useNavigate } from "@tanstack/react-router";
 import { AlertOctagon } from "lucide-react";
+import { useState } from "react";
+import { ReportDialog } from "./report-dialog";
 
 /**
  * Shown in place of a page that failed to render. The sidebar and every other
@@ -9,6 +11,7 @@ import { AlertOctagon } from "lucide-react";
 export function PageError({ error, reset }: ErrorComponentProps) {
   const navigate = useNavigate();
   const message = error instanceof Error ? error.message : String(error);
+  const [report, setReport] = useState(false);
   return (
     <div className="flex h-full items-center justify-center p-8" role="alert">
       <div className="max-w-lg rounded-lg border border-line bg-surface p-5">
@@ -33,7 +36,11 @@ export function PageError({ error, reset }: ErrorComponentProps) {
           >
             Go to Overview
           </Button>
+          <Button size="sm" variant="ghost" onClick={() => setReport(true)}>
+            Report this problem
+          </Button>
         </div>
+        {report ? <ReportDialog context={message} onClose={() => setReport(false)} /> : null}
       </div>
     </div>
   );

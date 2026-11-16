@@ -12,6 +12,7 @@ mod insights;
 mod intel;
 mod operator;
 mod ops;
+mod reports;
 mod state;
 
 use tauri::Manager;
@@ -109,6 +110,9 @@ pub fn run() {
             insights::insights,
             background::scan_schedule,
             background::set_auto_refresh,
+            reports::diagnostics_report,
+            reports::open_issue,
+            reports::export_usage_csv,
         ])
         .build(tauri::generate_context!())
         .expect("error while building AGASTHY")

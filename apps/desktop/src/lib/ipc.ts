@@ -91,6 +91,12 @@ export const api = {
   processes: () => invoke<ProcessSnapshot>("processes"),
   agentReport: () => invoke<AgentReport>("agent_report"),
   insights: () => invoke<InsightsReport>("insights"),
+  /** Redacted Markdown summary for a bug report; the user reviews it before sharing. */
+  diagnosticsReport: () => invoke<string>("diagnostics_report"),
+  /** Opens this project's GitHub "new issue" page with the given text. */
+  openIssue: (title: string, body: string) => invoke<void>("open_issue", { title, body }),
+  /** Native save dialog, then writes the CSV. Resolves to the saved path, or null if cancelled. */
+  exportUsageCsv: (windowDays: number) => invoke<string | null>("export_usage_csv", { windowDays }),
   scanSchedule: () => invoke<ScanSchedule>("scan_schedule"),
   setAutoRefresh: (enabled: boolean) => invoke<void>("set_auto_refresh", { enabled }),
   agentWorktrees: () => invoke<WorktreeReport>("agent_worktrees"),

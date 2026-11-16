@@ -1,5 +1,6 @@
 import type { SessionUsage } from "@agasthy/shared-types";
-import { Badge, StateView, cn } from "@agasthy/ui";
+import { Badge, Button, StateView, cn } from "@agasthy/ui";
+import { Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PageHeader, Panel } from "../components/page";
@@ -14,6 +15,19 @@ export function UsagePage() {
   const [days, setDays] = useState<(typeof RANGES)[number]>(30);
   const q = useQuery({ queryKey: ["agent-usage", days], queryFn: () => api.agentUsage(days), refetchInterval: 30_000 });
   const r = q.data;
+  const [saved, setSaved] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const path = await api.exportUsageCsv(days);
+      if (path) setSaved(`Saved to ${path}`);
+    } catch (e) {
+      setSaved(`Export failed: ${errorMessage(e)}`);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -21,6 +35,11 @@ export function UsagePage() {
         title="Token Usage"
         subtitle="what your coding agents consumed, read from their own local logs"
         actions={
+          <div className="flex items-center gap-2">
+          {saved ? <span className="max-w-[260px] truncate text-[11.5px] text-muted" role="status">{saved}</span> : null}
+          <Button size="sm" variant="ghost" disabled={!r || r.days.length === 0 || exporting} onClick={() => void exportCsv()}>
+            <Download aria-hidden /> {exporting ? "Exporting…" : "Export CSV"}
+          </Button>
           <div className="flex items-center gap-1 rounded-md border border-line p-0.5" role="radiogroup" aria-label="Time range">
             {RANGES.map((d) => (
               <button
@@ -33,6 +52,7 @@ export function UsagePage() {
                 {d} days
               </button>
             ))}
+          </div>
           </div>
         }
       />

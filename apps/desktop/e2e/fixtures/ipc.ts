@@ -352,6 +352,8 @@ export async function installFixtureIpc(page: Page): Promise<void> {
         { id: "stale-packages", severity: "info", area: "Freshness", title: "Package data is 9 days old", detail: "fixture", action: { kind: "scan", scan: "packages", label: "Scan now" } },
       ],
     };
+    responses.diagnostics_report = "### Environment\n\n- AGASTHY 0.0.0-fixture\n- macOS 15.6 (aarch64), Apple M3, 16 GB memory\n\n### Recent diagnostics log\n\n```text\n(empty)\n```\n";
+    responses.export_usage_csv = "~/Downloads/agasthy-token-usage-30d.csv";
     responses.scan_schedule = { auto_refresh: true, refresh_after_hours: 24, kinds: ["packages", "software", "repositories", "ai"] };
     responses.operator_settings = {
       presets: [
@@ -385,6 +387,10 @@ export async function installFixtureIpc(page: Page): Promise<void> {
       }
       if (cmd === "entity_detail" && args?.id === runtime.id) {
         return { entity: runtime, evidence: [], outgoing: [], incoming: [] } as T;
+      }
+      if (cmd === "open_issue") {
+        (window as unknown as { __lastIssue?: unknown }).__lastIssue = args;
+        return null as T;
       }
       if (cmd in responses) return responses[cmd] as T;
       throw `fixture: no response for ${cmd}`;

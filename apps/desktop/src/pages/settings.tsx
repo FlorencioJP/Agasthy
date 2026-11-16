@@ -4,6 +4,7 @@ import { FolderPlus, RefreshCw, Trash2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { AiModelPanel } from "../components/ai-model-panel";
+import { ReportDialog } from "../components/report-dialog";
 import { Kv, PageHeader, Panel } from "../components/page";
 import { SCAN_LABELS, progressLabel, useScanActivity } from "../components/scan-activity";
 import { formatDateTime, formatNumber, formatRelative, shortenHome } from "../lib/format";
@@ -312,6 +313,7 @@ function AboutPanel() {
             ["Database", <code className="selectable font-mono text-[11.5px]">{info.data.db_path}</code>],
             ["Schema version", info.data.schema_version],
             ["Updates", <UpdatesRow />],
+            ["Problems", <ReportRow />],
             [
               "Diagnostics log",
               <span className="flex flex-wrap items-center gap-2">
@@ -362,6 +364,19 @@ function UpdatesRow() {
             ? `Could not check: ${s.message}`
             : "Asks github.com for the latest release. Nothing about your machine is sent; updates are signature-checked and only installed when you click Install."}
       </span>
+    </span>
+  );
+}
+
+function ReportRow() {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <Button size="sm" onClick={() => setOpen(true)}>
+        Report a problem
+      </Button>
+      <span className="text-muted">Prepares a redacted summary you review before opening a GitHub issue.</span>
+      {open ? <ReportDialog onClose={() => setOpen(false)} /> : null}
     </span>
   );
 }

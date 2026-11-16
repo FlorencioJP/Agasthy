@@ -35,6 +35,11 @@ AGASTHY never scans your whole disk. Repository discovery only looks inside fold
 - **Token Usage page.** AGASTHY reads coding agents' own local usage records: Claude Code session logs (`~/.claude/projects/**/*.jsonl`), Codex session logs (`~/.codex/sessions/**/*.jsonl`) and Hermes Agent's database (`~/.hermes/state.db`, opened read-only; only token and cost columns are selected). Only token counters, model names, timestamps and the session folder are kept, in memory; prompts, replies and tool output are never stored, shown or sent. Cost figures are estimates at API list prices.
 - Git worktrees of scanned repositories are listed with `git worktree list --porcelain` and `git status`.
 
+## Exports
+
+- **Report a problem** (Settings → About, or the error screen) builds a Markdown summary: AGASTHY version, macOS version, chip and memory, scan status and counts, a few settings, agent-session counts, and the last 40 lines of the diagnostics log, with your home folder written as `~`. It contains no hostname, project names or file contents. You see and can edit all of it; it leaves your Mac only if you copy it or click **Open GitHub issue**, which opens this project's public issue page in your browser with that text.
+- **Export CSV** (Token Usage) writes token counts and estimated cost per day, agent, project folder (with `~`) and model to a file you choose in a save dialog. The app's web view cannot choose or write file paths itself.
+
 ## Stores
 
 A diagnostics log (`logs/agasthy.log` in the app data folder, at most about 4 MB) records start-up (version and OS), crashes, failed scans and failed background tasks, with your home folder written as `~`. It is never uploaded; Settings → About shows where it is so you can attach it to a bug report.

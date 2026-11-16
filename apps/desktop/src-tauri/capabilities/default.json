@@ -55,6 +55,9 @@
     "allow-scan-schedule",
     "allow-set-auto-refresh",
     "updater:default",
-    "process:allow-restart"
+    "process:allow-restart",
+    "allow-diagnostics-report",
+    "allow-open-issue",
+    "allow-export-usage-csv"
   ]
 }

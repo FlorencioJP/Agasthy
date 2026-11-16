@@ -187,6 +187,26 @@ test.describe("with the fixture backend", () => {
     await expect(page.getByRole("checkbox", { name: /Keep data fresh in the background/ })).toBeChecked();
   });
 
+  test("report a problem shows an editable, redacted report and opens a pre-filled issue", async ({ page }) => {
+    await page.goto("/#/settings");
+    await page.getByRole("button", { name: "Report a problem" }).click();
+    const dialog = page.getByRole("dialog", { name: "Report a problem" });
+    await expect(dialog.getByRole("textbox", { name: "Attached report" })).toHaveValue(/### Environment/);
+    await dialog.getByPlaceholder(/Short summary/).fill("Agents page empty");
+    await dialog.getByPlaceholder(/What you did/).fill("Opened Agents with Claude Code running.");
+    await dialog.getByRole("button", { name: "Open GitHub issue" }).click();
+    const sent = await page.evaluate(() => (window as unknown as { __lastIssue?: { title: string; body: string } }).__lastIssue);
+    expect(sent?.title).toBe("Agents page empty");
+    expect(sent?.body).toContain("Opened Agents with Claude Code running.");
+    expect(sent?.body).toContain("<details><summary>AGASTHY report</summary>");
+  });
+
+  test("token usage exports a CSV through a native save dialog", async ({ page }) => {
+    await page.goto("/#/usage");
+    await page.getByRole("button", { name: "Export CSV" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Saved to ~/Downloads/agasthy-token-usage-30d.csv" })).toBeVisible();
+  });
+
   test("snapshots list what is missing as commands, never values", async ({ page }) => {
     await page.goto("/#/snapshots");
     await page.getByRole("button", { name: "What's missing?" }).click();

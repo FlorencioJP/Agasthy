@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [0.1.2] - 2026-11-16
 
+- **Report a problem:** a redacted, editable summary for GitHub issues, from Settings → About or the error screen.
+- **Export CSV** on Token Usage: tokens and estimated cost per day, agent, project folder and model.
+- Storage & Cleanup no longer misses build folders in a project when `.git` is listed first in the folder.
+
 First public release (Apple silicon, macOS 12+). Everything below is included.
 
 - Release builds no longer try to code-sign with an empty identity when no Apple account is configured.
