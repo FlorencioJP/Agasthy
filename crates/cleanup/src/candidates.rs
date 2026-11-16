@@ -240,10 +240,10 @@ fn repo_artifacts(repo: &Path) -> Vec<(PathBuf, CleanupCategory, &'static str, &
         let name = e.file_name().to_string_lossy().to_string();
         let parent = e.path().parent().unwrap_or(repo);
         let found = match name.as_str() {
-            ".git" => {
-                it.skip_current_dir();
-                None
-            }
+            // Skipped by the dot-folder rule below. Skipping here as well would
+            // skip twice and end the walk of the whole project (seen when `.git`
+            // is listed first, as on Linux).
+            ".git" => None,
             "node_modules" if parent.join("package.json").is_file() => Some((
                 CleanupCategory::NodeModules,
                 "installed npm dependencies",
@@ -526,6 +526,31 @@ mod tests {
             matches!(a.docker, Availability::Unavailable { .. }),
             "docker absent in mock"
         );
+    }
+
+    /// Directory order differs between file systems; `.git` listed before the
+    /// artifacts must not end the walk early.
+    #[test]
+    fn git_folder_does_not_hide_later_artifacts() {
+        let d = tempfile::tempdir().unwrap();
+        let repo = std::fs::canonicalize(d.path()).unwrap().join("app");
+        mk(
+            &repo,
+            &[
+                (".git/HEAD", 1),
+                (".git/objects/x", 1),
+                ("Cargo.toml", 1),
+                ("target/debug/x", 10),
+                ("web/package.json", 1),
+                ("web/node_modules/a", 1),
+            ],
+        );
+        let found: Vec<String> = repo_artifacts(&repo)
+            .into_iter()
+            .map(|(p, ..)| p.strip_prefix(&repo).unwrap().display().to_string())
+            .collect();
+        assert!(found.contains(&"target".to_string()), "{found:?}");
+        assert!(found.contains(&"web/node_modules".to_string()), "{found:?}");
     }
 
     #[test]

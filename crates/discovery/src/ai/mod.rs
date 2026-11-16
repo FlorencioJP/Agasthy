@@ -940,5 +940,6 @@ fn provider_refs_in_config(rel: &str, raw: &str) -> Vec<(&'static str, ProviderL
     out
 }
 
-#[cfg(test)]
+// These tests build executable stubs in a temporary home, so they are Unix-only.
+#[cfg(all(test, unix))]
 mod tests;
