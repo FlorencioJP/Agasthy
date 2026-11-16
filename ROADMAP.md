@@ -69,11 +69,16 @@ A box is ticked only when the item is implemented **and** verified. Anything par
 
 ## Phase 4: System operations
 
-- [ ] Process manager (graceful stop; force only with confirmation; protected processes)
-- [ ] Listening ports
-- [ ] Disk analysis by category
-- [ ] Cleanup candidates with dry-run, Trash-based removal, verification and audit
-- [ ] Docker resources and safe Docker cleanup (volumes never removed automatically)
+- [x] Typed action engine: dry-run plan → single-use, expiring confirmation → re-validation → execution → verification → audit (refused attempts audited too)
+- [x] Process manager: CPU, memory, ports, project link, classification; graceful stop and separate force quit; PID + start-time targeting; system, other-user, self and parent processes refused
+- [x] Listening TCP ports via `lsof` (current user's processes)
+- [x] Disk analysis: node_modules, Rust target, Python venvs, build output (Git-ignored, no tracked files), package and developer caches, model caches, duplicate clones (review only)
+- [x] Same-volume quarantine with restore and explicit permanent delete
+- [x] Docker usage; prune build cache or dangling images on confirmation; volumes never touched
+- [ ] macOS Trash integration ("Put Back") as an alternative to AGASTHY's quarantine
+- [ ] Cleanup across volumes
+- [ ] Restarting services (launchd, brew services) and opening a terminal at a process location
+- [ ] Windows process ownership and port listing
 
 ## Phase 5: Advanced intelligence
 

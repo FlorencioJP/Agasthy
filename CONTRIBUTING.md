@@ -8,7 +8,7 @@ These come from the product's purpose and apply to every change:
 
 1. **No fabricated data.** Never show sample, mock or estimated machine data in the app. If something cannot be measured, return `Availability::Unavailable` (or `PermissionDenied` / `Unsupported`) with a reason.
 2. **Evidence for claims.** A new relationship or provenance claim needs an evidence record and an honest confidence level.
-3. **Read-only by default.** Discovery code must not modify the machine. Anything that mutates must be a separate, typed, approval-gated action with an audit entry, and must not be added without discussion in an issue first.
+3. **Read-only by default.** Discovery code must not modify the machine. Anything that mutates must be a new `ActionRequest` variant in `crates/actions` with a dry-run plan, re-validation at execution, verification and an audit entry, and must not be added without discussion in an issue first.
 4. **No shells.** External programs run only through `CommandRunner`, with fixed argument arrays, and must be added to the allowlist deliberately.
 5. **No secrets.** Never read secret values into storage or logs; detect presence only.
 6. **Platform code stays in `crates/platform-adapters`.**

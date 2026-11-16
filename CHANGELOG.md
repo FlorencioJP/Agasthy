@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added (Phase 4)
+- Typed action engine (`agasthy-actions`) with dry-run plans, single-use confirmations, re-validation, verification and audit.
+- Processes screen: live process table with ports, project links and protection reasons; stop and force quit with review.
+- Storage & Cleanup screen: disk analysis, Git-verified project artifacts and developer caches, restorable quarantine, Docker usage and prune.
+- CLI: `agasthy processes`, `agasthy disk` (read-only).
+
 ### Added (Phase 3)
 - AI ecosystem discovery: assistants, desktop AI apps and local inference engines with on-disk evidence; providers with evidence levels; local models; MCP servers; AI instruction, agent, skill, command, settings and MCP files.
 - Duplicate, overlap, orphan, `@import` and potential-conflict analysis for AI instruction files.

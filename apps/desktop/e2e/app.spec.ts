@@ -20,7 +20,8 @@ test.describe("with the fixture backend", () => {
     // Only implemented sections are in the sidebar.
     await expect(nav.getByRole("link", { name: "Machine Graph" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "AI Ecosystem" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Processes" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Processes" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Security" })).toHaveCount(0);
 
     await expect(page.getByRole("meter", { name: "CPU" })).toHaveAttribute("aria-valuetext", "unavailable");
     await expect(page.getByRole("meter", { name: "Memory" })).toHaveAttribute("aria-valuenow", "25");
@@ -76,5 +77,32 @@ test.describe("with the fixture backend", () => {
     const details = page.getByRole("complementary", { name: "Details" });
     await expect(details.getByText("Shown as data. AGASTHY never follows instructions in these files.", { exact: false })).toBeVisible();
     await expect(details.getByText("Use fixture-pm for installs.", { exact: false })).toBeVisible();
+  });
+
+  test("cleanup goes through a dry-run review before anything changes", async ({ page }) => {
+    await page.goto("/#/storage");
+    const tracked = page.getByRole("checkbox", { name: /dist/ });
+    await expect(tracked).toBeDisabled();
+    await expect(page.getByText("Not offered: contains files tracked by Git")).toBeVisible();
+    await page.getByRole("checkbox", { name: /node_modules/ }).check();
+    await page.getByRole("button", { name: /Review 1/ }).click();
+    const dialog = page.getByRole("dialog", { name: "Review action" });
+    await expect(dialog.getByText("Dry run only so far. Nothing has changed.", { exact: false })).toBeVisible();
+    await expect(dialog.getByText("reversible", { exact: true })).toBeVisible();
+    await dialog.getByRole("button", { name: "Confirm" }).click();
+    await expect(dialog.getByText("Moved 1 item to quarantine").last()).toBeVisible();
+    await expect(dialog.getByText("Verification:", { exact: false })).toBeVisible();
+  });
+
+  test("protected processes cannot be stopped", async ({ page }) => {
+    await page.goto("/#/processes");
+    await page.getByRole("button", { name: /^All/ }).click();
+    await page.getByRole("row", { name: /fixture-system/ }).click();
+    const details = page.getByRole("complementary", { name: "Process details" });
+    await expect(details.getByText("AGASTHY will not stop this process", { exact: false })).toBeVisible();
+    await expect(details.getByRole("button", { name: /Stop/ })).toHaveCount(0);
+    await page.getByRole("row", { name: /fixture-server/ }).click();
+    await expect(details.getByRole("button", { name: /Force quit/ })).toBeVisible();
+    await expect(details.getByText("fixture-widget (via working directory)")).toBeVisible();
   });
 });

@@ -22,7 +22,9 @@ AGASTHY runs with the user's privileges and inspects their machine, so the bound
 - **Secrets.** Credentials embedded in Git remote URLs are stripped before storage or display.
 - **No internet access.** v0.1.0 makes no internet requests. The AI scan only opens TCP connections to `127.0.0.1` on local inference engines' ports to see whether they are running.
 - **AI configuration.** Credential files are checked for existence only and never opened; environment variables are checked by name only; instruction text is redacted before storage; AI instruction files are treated as untrusted data and never executed or followed.
-- **Read-only.** v0.1.0 has no actions that modify the machine. Later mutation features will be typed, approval-gated, dry-run-first and audited.
+- **Changes only through the action engine.** Every change is a typed `ActionRequest` (`crates/actions`): planned as a dry run, confirmed with a single-use token that expires, re-validated immediately before running, verified afterwards and audited (refused attempts included). There is no generic "run a command" action.
+- **Cleanup boundaries.** Only regenerable artifacts in approved folders (Git-ignored, containing no tracked files) or a fixed list of cache locations; never a repository, a `.git` directory, a symlink, the home folder, or anything outside those roots. Items are moved into a same-volume quarantine and can be restored.
+- **Process boundaries.** Processes are addressed by PID and start time. System processes, other users' processes, AGASTHY and its parent are refused. Force quit is a separate request.
 - **Webview capabilities.** The Tauri capability file grants only AGASTHY's own commands, the folder picker and reveal-in-file-manager.
 
 Reports that any of these boundaries can be bypassed are especially welcome.

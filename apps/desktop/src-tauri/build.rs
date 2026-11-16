@@ -21,6 +21,12 @@ const COMMANDS: &[&str] = &[
     "runtime_impact",
     "shared_dependencies",
     "list_edges",
+    "processes",
+    "disk_analysis",
+    "cached_disk_analysis",
+    "quarantine_list",
+    "plan_action",
+    "execute_action",
 ];
 
 fn main() {

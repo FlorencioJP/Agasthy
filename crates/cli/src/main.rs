@@ -23,6 +23,8 @@ USAGE:
     agasthy shared --db FILE
     agasthy packages [--db FILE] [--full]
     agasthy telemetry
+    agasthy processes [--db FILE]          (read-only; --db links processes to repositories)
+    agasthy disk [folder...] [--db FILE]   (read-only cleanup analysis; folders act as approved roots)
     agasthy platform
 
 Output is JSON. Without --full, a summary is printed instead of every entity.
@@ -115,6 +117,61 @@ fn run(raw: &[String]) -> Result<(), String> {
             let home = platform.home_dir().ok_or("no home directory")?;
             let opts = agasthy_discovery::AiScanOptions::new(home, projects);
             agasthy_discovery::scan_ai(platform.as_ref(), &opts, &agasthy_discovery::no_progress)
+        }
+        "processes" | "disk" => {
+            let repos: Vec<(String, String, PathBuf, u32)> = match &db {
+                Some(path) => Store::open(path)
+                    .and_then(|s| {
+                        s.list_entities(&agasthy_core::EntityQuery {
+                            kind: Some(agasthy_core::EntityKind::Repository),
+                            text: None,
+                            limit: Some(5000),
+                            offset: None,
+                        })
+                    })
+                    .map_err(|e| e.to_string())?
+                    .into_iter()
+                    .filter_map(|e| {
+                        let d = e
+                            .attributes
+                            .get("clones_of_same_remote")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(1) as u32;
+                        e.path.map(|p| (e.id, e.name, PathBuf::from(p), d))
+                    })
+                    .collect(),
+                None => Vec::new(),
+            };
+            let out = if cmd == "processes" {
+                let mut m = agasthy_process::ProcessMonitor::new();
+                let refs: Vec<agasthy_process::RepoRef> = repos
+                    .iter()
+                    .map(|(i, n, p, _)| (i.clone(), n.clone(), p.clone()))
+                    .collect();
+                m.snapshot(&runner, &refs);
+                std::thread::sleep(std::time::Duration::from_millis(400));
+                serde_json::to_value(m.snapshot(&runner, &refs))
+            } else {
+                let mut roots = Vec::new();
+                for a in &args {
+                    roots.push(
+                        validate_scan_root(platform.as_ref(), a)
+                            .map_err(|e| format!("{a}: {e}"))?,
+                    );
+                }
+                let input = agasthy_cleanup::AnalysisInput {
+                    home: platform.home_dir().ok_or("no home directory")?,
+                    scan_roots: roots,
+                    repos: repos.iter().map(|(_, _, p, d)| (p.clone(), *d)).collect(),
+                };
+                serde_json::to_value(agasthy_cleanup::analyze(&input, &runner))
+            }
+            .map_err(|e| e.to_string())?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?
+            );
+            return Ok(());
         }
         "telemetry" => {
             let mut m = Monitor::new();

@@ -4,6 +4,8 @@ import { DiscoveryPage, type DiscoveryTab, TABS } from "./pages/discovery";
 import { AI_TABS, AiPage, type AiSearch, type AiTab } from "./pages/ai";
 import { GraphPage, type GraphMode, type GraphSearch } from "./pages/graph";
 import { OverviewPage } from "./pages/overview";
+import { ProcessesPage } from "./pages/processes";
+import { StoragePage } from "./pages/storage";
 import { PrivacyPage } from "./pages/privacy";
 import { SettingsPage } from "./pages/settings";
 
@@ -63,10 +65,13 @@ const aiRoute = createRoute({
   component: AiPage,
 });
 
+const processesRoute = createRoute({ getParentRoute: () => rootRoute, path: "/processes", component: ProcessesPage });
+const storageRoute = createRoute({ getParentRoute: () => rootRoute, path: "/storage", component: StoragePage });
+
 const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/settings", component: SettingsPage });
 const privacyRoute = createRoute({ getParentRoute: () => rootRoute, path: "/privacy", component: PrivacyPage });
 
-const routeTree = rootRoute.addChildren([overviewRoute, discoveryRoute, graphRoute, aiRoute, settingsRoute, privacyRoute]);
+const routeTree = rootRoute.addChildren([overviewRoute, discoveryRoute, graphRoute, aiRoute, processesRoute, storageRoute, settingsRoute, privacyRoute]);
 
 // Hash history: the packaged app serves static files, so deep links must not hit the server.
 export const router = createRouter({ routeTree, history: createHashHistory() });

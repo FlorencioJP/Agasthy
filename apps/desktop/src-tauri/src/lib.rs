@@ -5,6 +5,7 @@
 //! `crates/` workspace members.
 
 mod commands;
+mod ops;
 mod state;
 
 use tauri::Manager;
@@ -44,6 +45,12 @@ pub fn run() {
             commands::runtime_impact,
             commands::shared_dependencies,
             commands::list_edges,
+            ops::processes,
+            ops::disk_analysis,
+            ops::cached_disk_analysis,
+            ops::quarantine_list,
+            ops::plan_action,
+            ops::execute_action,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AGASTHY");

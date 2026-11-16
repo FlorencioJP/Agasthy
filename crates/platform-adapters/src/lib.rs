@@ -105,6 +105,10 @@ pub const DEFAULT_COMMAND_ALLOWLIST: &[&str] = &[
     "cargo",
     // macOS hardware info
     "system_profiler",
+    // listening ports (read-only: `lsof -nP -iTCP -sTCP:LISTEN -Fpn`)
+    "lsof",
+    // Docker usage and the two prune operations in agasthy-cleanup::docker
+    "docker",
 ];
 
 /// Build the command runner used in production for this platform.

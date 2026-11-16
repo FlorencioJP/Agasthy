@@ -1,4 +1,10 @@
 import type {
+  ActionPlan,
+  ActionRequest,
+  ActionResult,
+  DiskAnalysis,
+  ProcessSnapshot,
+  QuarantineOp,
   AppInfo,
   EntityKind,
   Edge,
@@ -67,6 +73,13 @@ export const api = {
   runtimeImpact: (id: string) => invoke<ImpactReport | null>("runtime_impact", { id }),
   sharedDependencies: (limit?: number) => invoke<SharedDependency[]>("shared_dependencies", { limit }),
   listEdges: (kind: RelationKind) => invoke<Edge[]>("list_edges", { kind }),
+  processes: () => invoke<ProcessSnapshot>("processes"),
+  diskAnalysis: () => invoke<DiskAnalysis>("disk_analysis"),
+  cachedDiskAnalysis: () => invoke<DiskAnalysis | null>("cached_disk_analysis"),
+  quarantineList: () => invoke<QuarantineOp[]>("quarantine_list"),
+  /** Dry run: returns what would happen and a single-use confirmation token. */
+  planAction: (request: ActionRequest) => invoke<ActionPlan>("plan_action", { request }),
+  executeAction: (token: string) => invoke<ActionResult>("execute_action", { token }),
 };
 
 export async function onScanEvent(handler: (e: ScanEvent) => void): Promise<() => void> {

@@ -34,4 +34,10 @@ It contains scan results with their evidence, your folder list, scan history and
 
 Only allowlisted programs, with fixed arguments, never through a shell: `git`, `brew`, `npm`, `pnpm`, `uv`, `python3` (for `pip list`), `cargo`, `system_profiler`, and the catalogued developer tools, which are run only with their version argument. Shells and privilege-escalation tools are always refused. AGASTHY never uses `sudo`.
 
-AGASTHY v0.1.0 does not modify your machine: there are no delete, install, update or terminate actions.
+Also `lsof` (to list listening TCP ports) and `docker` (`system df`, `images --filter dangling=true --quiet`, and, only after you confirm, `builder prune --force` or `image prune --force`).
+
+## Changes
+
+Changes happen only when you confirm a reviewed plan. In this build that means: stopping or force-quitting a process you own; moving cleanup candidates into AGASTHY's quarantine; restoring or permanently deleting quarantined items; and pruning Docker build cache or dangling images. Each one is planned as a dry run first (exact targets, sizes, risks, recovery), re-validated just before it runs, verified afterwards and written to the audit log. AGASTHY never uses `sudo`, never deletes Git repositories or files tracked by Git, never removes Docker volumes, and never stops system processes or other users' processes.
+
+Quarantine lives in `~/Library/Application Support/org.agasthy.desktop/quarantine/`. Items are moved there with a rename on the same disk (never copied), so disk space is freed only when you choose **Delete permanently**.

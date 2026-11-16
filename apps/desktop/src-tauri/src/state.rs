@@ -2,8 +2,11 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
 
+use agasthy_actions::ActionEngine;
+use agasthy_cleanup::{DiskAnalysis, Quarantine};
 use agasthy_core::{Availability, ScanKind, Store};
 use agasthy_platform::{GpuInfo, Platform, SystemCommandRunner};
+use agasthy_process::ProcessMonitor;
 use agasthy_system_monitor::Monitor;
 
 pub struct Inner {
@@ -15,6 +18,11 @@ pub struct Inner {
     pub monitor: Mutex<Monitor>,
     pub gpus: OnceLock<Availability<Vec<GpuInfo>>>,
     pub running: Mutex<HashSet<ScanKind>>,
+    pub processes: Mutex<ProcessMonitor>,
+    pub quarantine: Quarantine,
+    pub engine: ActionEngine,
+    /// The latest disk analysis; cleanup plans may only target its candidates.
+    pub analysis: Mutex<Option<DiskAnalysis>>,
 }
 
 #[derive(Clone)]
@@ -33,6 +41,8 @@ impl AppState {
             platform.as_ref(),
             &agasthy_discovery::catalog::tool_ids(),
         );
+        let quarantine = Quarantine::new(data_dir.join("quarantine"))
+            .map_err(|e| format!("could not create the quarantine folder: {e}"))?;
         Ok(Self(Arc::new(Inner {
             data_dir,
             db_path,
@@ -42,6 +52,10 @@ impl AppState {
             monitor: Mutex::new(Monitor::new()),
             gpus: OnceLock::new(),
             running: Mutex::new(HashSet::new()),
+            processes: Mutex::new(ProcessMonitor::new()),
+            quarantine,
+            engine: ActionEngine::new(),
+            analysis: Mutex::new(None),
         })))
     }
 }

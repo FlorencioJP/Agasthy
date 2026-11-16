@@ -11,7 +11,7 @@ Discover · Understand · Connect · Optimize · Operate</p>
 
 AGASTHY is an open-source, local-first desktop application that discovers what is on a developer's machine, works out how the pieces relate, and explains it with evidence.
 
-> **Status: early development (v0.1.0, Phase 3).** It runs on macOS. It has not been published or released, and nothing here is offered as a download yet.
+> **Status: early development (v0.1.0, Phase 4).** It runs on macOS. It has not been published or released, and nothing here is offered as a download yet.
 
 ## Why it exists
 
@@ -33,13 +33,15 @@ AGASTHY reads the machine directly and keeps what it finds, plus the evidence be
 | **Runtime requirements & impact** | Links projects to the runtimes they declare (`engines.node`, `.nvmrc`, `requires-python`, `rust-version`, `go`, …). Answers *"what breaks if I remove this runtime?"*: for each project, whether it would break, fall back to another copy on PATH, or be unaffected, and what is unknown. Nothing is removed; it is a simulation. |
 | **Machine Graph** | An interactive graph of projects, runtimes, dependencies, packages, binaries and upstream projects, with focus, depth and kind filters, search, and the evidence behind every edge. |
 | **AI ecosystem** | Finds AI coding assistants, desktop AI apps and local inference engines from evidence on disk; the providers they use (with how strongly each is confirmed); MCP servers in every known config; local models; and AI instruction files (`CLAUDE.md`, `AGENTS.md`, Cursor/Copilot rules, agents, skills, commands) globally and per project, with duplicates, overlaps, orphans and potential conflicts. Credential files are only checked for existence and secrets are redacted. |
+| **Processes** | Every process with CPU, memory, listening ports, the project it runs in, and why it is protected if it is. Stop or force-quit your own processes after a reviewed confirmation; system and other users' processes are refused. |
+| **Storage & cleanup** | Measures dependency folders and build output in your projects (only those Git ignores and that contain no tracked files) and a fixed list of developer caches. You pick items, review a dry run, and they move to a quarantine you can restore from; space is freed when you delete them permanently. Docker build cache and dangling images can be pruned; volumes never are. |
 | **Audit & privacy** | An append-only audit log of every action, and a privacy page listing exactly which programs AGASTHY may run. |
 
 Repositories, installed packages, binaries on PATH and applications are kept as **separate kinds**. A local clone is never treated as installed software.
 
 ### Not built yet
 
-Planned, but **not** in this build: process management, disk cleanup, security advisories, impact analysis, the update lab, snapshots and the AI operator. See [ROADMAP.md](ROADMAP.md). The app's sidebar shows only the sections that work.
+Planned, but **not** in this build: security advisories, impact analysis, the update lab, snapshots and the AI operator. See [ROADMAP.md](ROADMAP.md). The app's sidebar shows only the sections that work.
 
 ## Screenshots
 
@@ -65,6 +67,9 @@ crates/platform-adapters/ OS adapters (macOS / Windows / Linux) and the guarded 
 crates/discovery/        read-only discovery: repositories, software, packages
 crates/provenance/       remote-URL parsing, credential redaction, confidence rules
 crates/graph/            graph views, shared dependencies, runtime impact analysis
+crates/process-manager/  processes, listening ports, guarded termination
+crates/cleanup/          disk analysis, cleanup safety checks, quarantine, Docker usage
+crates/actions/          typed action engine: plan (dry run) → confirm → execute → verify → audit
 crates/system-monitor/   CPU / memory / disk / process telemetry
 crates/cli/              `agasthy` headless CLI (JSON output)
 packages/shared-types/   TypeScript types generated from the Rust model (ts-rs)

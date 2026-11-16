@@ -192,6 +192,76 @@ export async function installFixtureIpc(page: Page): Promise<void> {
     responses.list_edges = [
       { id: "c1", kind: "potential_conflict", from_id: fileA.id, to_id: fileB.id, confidence: "probable", attributes: { topic: "package_manager" } },
     ];
+    const candidate = {
+      id: "/fixture/code/fixture-widget/node_modules",
+      category: "node_modules",
+      path: "/fixture/code/fixture-widget/node_modules",
+      size_bytes: avail(5 * 1024 ** 2),
+      last_modified: now - 86_400_000,
+      safety: "safe",
+      reason: "installed npm dependencies in fixture-widget",
+      regenerate: "reinstall with your package manager",
+      project: "/fixture/code/fixture-widget",
+      eligible: true,
+      blocked_by: null,
+    };
+    const tracked = { ...candidate, id: "/fixture/code/fixture-widget/dist", path: "/fixture/code/fixture-widget/dist", category: "build_output", eligible: false, blocked_by: "contains files tracked by Git" };
+    responses.cached_disk_analysis = {
+      analysed_at: now,
+      candidates: [candidate, tracked],
+      totals: [{ category: "node_modules", count: 1, bytes: 5 * 1024 ** 2, eligible_bytes: 5 * 1024 ** 2 }],
+      eligible_bytes: 5 * 1024 ** 2,
+      docker: { status: "unavailable", reason: "Docker is installed but its daemon is not running" },
+      issues: [],
+    };
+    responses.quarantine_list = [];
+    responses.plan_action = {
+      token: "fixture-token",
+      request: { type: "quarantine_paths", paths: [candidate.path] },
+      title: "Move 1 item to quarantine",
+      summary: "Each folder is moved into AGASTHY's quarantine.",
+      items: [{ label: candidate.path, detail: "node_modules", bytes: 5 * 1024 ** 2, blocked: null }],
+      total_bytes: 5 * 1024 ** 2,
+      warnings: ["Disk space is freed only when you permanently delete the quarantined items."],
+      can_execute: true,
+      reversible: true,
+      recovery: "Restore from Storage & Cleanup → Quarantine.",
+      expires_in_secs: 600,
+    };
+    responses.execute_action = {
+      title: "Moved 1 item to quarantine",
+      outcome: "succeeded",
+      message: "Delete them permanently from the Quarantine list to free the space, or restore them.",
+      details: [],
+      verification: "Each original path was confirmed gone.",
+      recovery: "Restore from Storage & Cleanup → Quarantine.",
+      bytes: 5 * 1024 ** 2,
+      quarantine_op: "op-fixture",
+    };
+    const proc = (pid: number, name: string, protectedReason: string | null) => ({
+      pid,
+      parent_pid: 1,
+      name,
+      exe: `/fixture/bin/${name}`,
+      command: [name],
+      cwd: null,
+      cpu_percent: avail(1.5),
+      memory_bytes: 1024 ** 2,
+      start_time: 1000 + pid,
+      run_time_secs: 60,
+      status: "Run",
+      kind: protectedReason ? "system" : "developer_server",
+      protected: protectedReason,
+      ports: protectedReason ? [] : [{ address: "127.0.0.1", port: 3000 }],
+      project: protectedReason ? null : { id: repo.id, name: "fixture-widget", via: "working directory" },
+      app_bundle: null,
+    });
+    responses.processes = {
+      taken_at: now,
+      processes: [proc(4242, "fixture-server", null), proc(77, "fixture-system", "part of the operating system")],
+      ports: avail(1),
+      own_pid: 1,
+    };
     const byKind: Record<string, unknown[]> = { repository: [repo], ai_tool: [aiTool], ai_config_file: [fileA, fileB] };
     window.__AGASTHY_TEST_IPC__ = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
       if (cmd === "list_entities") {

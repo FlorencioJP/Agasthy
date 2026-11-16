@@ -4,7 +4,7 @@
 
 1. **Real data only.** Every value shown comes from the machine. A value that could not be measured is an explicit `Availability::Unavailable | PermissionDenied | Unsupported` with a reason, never a zero or a placeholder.
 2. **Evidence for every claim.** Entities and relationships carry evidence records (what was observed, where, with what confidence).
-3. **Read-only discovery, separate mutation.** Discovery crates only observe. Later phases add mutation through a separate, typed, approval-gated layer.
+3. **Read-only discovery, separate mutation.** Discovery crates only observe. Every change goes through the typed action engine (`crates/actions`).
 4. **Platform logic behind traits.** Shared crates never branch on the operating system.
 5. **Thin shell.** `apps/desktop/src-tauri` holds state and command wiring only.
 
@@ -68,6 +68,16 @@ The graph is the `entities` and `relationships` tables; there is no separate gra
 - **Providers**: evidence levels from built-in vendor ties, tool settings (names and keys only), environment variable *names*, and credential files' *existence*. Local engines get a `127.0.0.1` TCP check.
 - **Files**: fixed global locations plus a walk of each scanned repository that only enters known AI directories. Instruction-type text is redacted (`ai/redact.rs`) and capped; configuration files are parsed but not stored.
 - **Analysis**: SHA-256 duplicates, overlaps (several instruction files applying to one directory), orphaned files (no reader installed), `@import` references, and potential conflicts. Conflicts are only reported when two files that apply together each state exactly one value for the same setting, with no negation on the line.
+
+## Actions (changes to the machine)
+
+`agasthy-actions` is the only code path that changes anything outside AGASTHY's own data:
+
+1. `plan(ActionRequest)` performs a dry run: it resolves exact targets, sizes, warnings, reversibility and recovery, and runs every safety check. If it can run, it returns a single-use token (10-minute expiry).
+2. The UI shows the plan; the user confirms.
+3. `execute(token)` re-validates every target (the disk may have changed), performs the action, verifies the result (process gone; original path gone and quarantine copy present), and writes an audit entry. Unknown, reused or expired tokens are refused and audited.
+
+Action types: `TerminateProcess { pid, start_time, force }`, `QuarantinePaths`, `RestoreQuarantine`, `PurgeQuarantine`, `DockerPrune { BuildCache | DanglingImages }`. Cleanup paths must come from the latest disk analysis and pass `cleanup::safety::check_path` (absolute, not a symlink, canonical, not a repository or `.git`, not containing a known repository, inside an approved folder or a listed cache root) and, for project artifacts, `check_untracked` (Git-ignored, no tracked files).
 
 ## Safety boundaries
 

@@ -9,13 +9,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
+name = "agasthy-actions"
+version = "0.1.0"
+dependencies = [
+ "agasthy-cleanup",
+ "agasthy-core",
+ "agasthy-platform",
+ "agasthy-process",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "ts-rs",
+]
+
+[[package]]
+name = "agasthy-cleanup"
+version = "0.1.0"
+dependencies = [
+ "agasthy-core",
+ "agasthy-platform",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "ts-rs",
+ "walkdir",
+]
+
+[[package]]
 name = "agasthy-cli"
 version = "0.1.0"
 dependencies = [
+ "agasthy-cleanup",
  "agasthy-core",
  "agasthy-discovery",
  "agasthy-graph",
  "agasthy-platform",
+ "agasthy-process",
  "agasthy-system-monitor",
  "serde_json",
 ]
@@ -36,10 +65,13 @@ dependencies = [
 name = "agasthy-desktop"
 version = "0.1.0"
 dependencies = [
+ "agasthy-actions",
+ "agasthy-cleanup",
  "agasthy-core",
  "agasthy-discovery",
  "agasthy-graph",
  "agasthy-platform",
+ "agasthy-process",
  "agasthy-system-monitor",
  "serde",
  "serde_json",
@@ -89,6 +121,19 @@ dependencies = [
  "thiserror 2.0.21",
  "ts-rs",
  "wait-timeout",
+]
+
+[[package]]
+name = "agasthy-process"
+version = "0.1.0"
+dependencies = [
+ "agasthy-core",
+ "agasthy-discovery",
+ "agasthy-platform",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "ts-rs",
 ]
 
 [[package]]

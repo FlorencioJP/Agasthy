@@ -94,8 +94,9 @@ export function PrivacyPage() {
                 </div>
                 <div className="mt-2">
                   Shells, <code className="font-mono">sudo</code> and similar programs are refused even if listed. Git runs with repository-configured helper programs
-                  (such as <code className="font-mono">core.fsmonitor</code>) disabled. AGASTHY changes nothing on your machine in this build: there are no delete,
-                  install, update or terminate actions.
+                  (such as <code className="font-mono">core.fsmonitor</code>) disabled. AGASTHY changes your machine only when you confirm a reviewed plan: stopping
+                  a process you own, moving cleanup candidates to its quarantine (restorable), deleting quarantined items, or pruning Docker build cache and
+                  dangling images. It never uses sudo, never deletes repositories or tracked files, and never removes Docker volumes.
                 </div>
               </Item>
               <Item title="Directories searched for tools, in order">

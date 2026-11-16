@@ -1,0 +1,22 @@
+[package]
+name = "agasthy-cleanup"
+description = "Disk analysis, cleanup candidates and a restorable quarantine for AGASTHY"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+agasthy-core.workspace = true
+agasthy-platform.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true
+walkdir.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true
