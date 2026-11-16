@@ -4,9 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-## [0.1.1] - 2026-11-16
+## [0.1.2] - 2026-11-16
 
 First public release (Apple silicon, macOS 12+). Everything below is included.
+
+- Release builds no longer try to code-sign with an empty identity when no Apple account is configured.
+- Rust toolchain pinned (1.94.1) so local, CI and release builds match.
 
 ### Added (release readiness)
 - In-app updates from GitHub Releases: signature-verified, installed only after confirmation, start-up check can be turned off.

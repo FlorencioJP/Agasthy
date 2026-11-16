@@ -18,6 +18,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# CI passes unset secrets as empty strings; an empty APPLE_SIGNING_IDENTITY
+# would make the bundler try to sign with identity "" and fail.
+for v in APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
+  if [ -z "${!v:-}" ]; then unset "$v"; fi
+done
+# A key generated without a password needs the variable present but empty.
+if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ] && [ -z "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD+x}" ]; then
+  export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""
+fi
+
 VERSION=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
 
 build_args=()
