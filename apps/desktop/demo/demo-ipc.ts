@@ -7,9 +7,13 @@
  * on every run and contain no data from a real machine. Never bundled into the app.
  */
 import type { Page } from "@playwright/test";
+import { buildDemoExtras, type DemoExtras } from "./demo-entities";
 
 export async function installDemoIpc(page: Page): Promise<void> {
-  await page.addInitScript(() => {
+  // Passed as plain JSON; typed again inside (Playwright's argument typing cannot handle this shape).
+  const payload: unknown = JSON.parse(JSON.stringify(buildDemoExtras(Date.now())));
+  await page.addInitScript((arg: unknown) => {
+    const extras = arg as DemoExtras;
     const now = Date.now();
     const H = 3_600_000;
     const D = 24 * H;
@@ -31,6 +35,7 @@ export async function installDemoIpc(page: Page): Promise<void> {
       { name: "docs-site", lang: "TypeScript", fw: ["Astro"], size: 0.4 * GB, dirty: [0, 1, 0], last: 2, runtime: "node" },
       { name: "infra", lang: "HCL", fw: ["Terraform"], size: 0.1 * GB, dirty: [0, 3, 1], last: 96, runtime: "" },
     ];
+    const remoteRef = (name: string) => ({ host: "github.com", owner: "acme-labs", name, path: `acme-labs/${name}`, is_github: true, web_url: `https://github.com/acme-labs/${name}` });
     const repoEntity = (p: P, i: number) => ({
       id: `repository:${code}/${p.name}`,
       kind: "repository",
@@ -44,8 +49,8 @@ export async function installDemoIpc(page: Page): Promise<void> {
         head: avail({ branch: i === 2 ? "feature/eval-harness" : "main", detached: false, unborn: false, commit_sha: "9f2c1e7a" + i, last_commit_at: now - p.last * D }),
         working_tree: avail({ clean: p.dirty.every((n) => n === 0), staged: p.dirty[0], modified: p.dirty[1], untracked: p.dirty[2], conflicted: 0 }),
         local_branches: avail(3 + (i % 4)),
-        remotes: [{ name: "origin", url: `https://github.com/acme-labs/${p.name}.git`, credentials_redacted: false, parsed: { host: "github.com", owner: "acme-labs", name: p.name } }],
-        primary_remote: { host: "github.com", owner: "acme-labs", name: p.name },
+        remotes: [{ name: "origin", url: `https://github.com/acme-labs/${p.name}.git`, credentials_redacted: false, parsed: remoteRef(p.name) }],
+        primary_remote: remoteRef(p.name),
         manifests: p.lang === "Go" ? ["go.mod"] : p.lang === "Python" ? ["pyproject.toml", "uv.lock"] : p.lang === "Rust" ? ["Cargo.toml", "Cargo.lock"] : ["package.json", "pnpm-lock.yaml"],
         languages: [{ language: p.lang, files: 120 + i * 37 }],
         primary_language: p.lang,
@@ -332,14 +337,17 @@ export async function installDemoIpc(page: Page): Promise<void> {
       list_scans: [],
       list_audit: [],
       list_entities: repos,
-      entity_detail: { entity: repos[0], evidence: [], outgoing: [], incoming: [] },
+
       graph_overview: graph,
       graph_neighborhood: { ...graph, center: repos[0].id },
       shared_dependencies: [
         ["typescript", "npm", 4], ["react", "npm", 3], ["zod", "npm", 2], ["vite", "npm", 2], ["pydantic", "PyPI", 1],
       ].map(([d, eco, count]) => ({ dependency: { id: `dependency:${d}`, kind: "dependency", name: d, path: null }, ecosystem: eco, projects: count })),
-      list_edges: [],
-      processes: { taken_at: now, processes: [], ports: avail(9), own_pid: 1 },
+
+      processes: { taken_at: now, processes: extras.processes, ports: avail(extras.processes.filter((p) => p.ports.length).length), own_pid: 1 },
+      removal_impact: extras.removalImpact,
+      snapshot_compare: extras.snapshotDiff,
+      snapshot_reconstruction: extras.reconstruction,
       cached_disk_analysis: disk,
       disk_analysis: disk,
       quarantine_list: [],
@@ -367,9 +375,9 @@ export async function installDemoIpc(page: Page): Promise<void> {
         cloud_consent: false,
         suggestions: ["What are my coding agents doing?", "Clean up after my agents", "What is using my RAM?", "Free 10 GB safely", "Which repositories have I not touched in 90 days?", "Which MCP servers are configured?"],
       },
-      security_settings: { osv_enabled: false, preview: [], preview_total: 0, last_report: null },
+      security_settings: extras.security,
       labs_list: [],
-      snapshots_list: [],
+      snapshots_list: extras.snapshots,
     };
 
     window.__AGASTHY_TEST_IPC__ = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
@@ -382,10 +390,20 @@ export async function installDemoIpc(page: Page): Promise<void> {
       }
       if (cmd === "list_entities") {
         const q = (args?.query ?? {}) as { kind?: string | null };
-        return (q.kind === "repository" || !q.kind ? repos : []) as T;
+        if (!q.kind || q.kind === "repository") return repos as T;
+        return (extras.byKind[q.kind as keyof typeof extras.byKind] ?? []) as T;
+      }
+      if (cmd === "list_edges") return extras.edges.filter((e) => e.kind === args?.kind) as T;
+      if (cmd === "entity_detail") {
+        const all = [...repos, ...Object.values(extras.byKind).flat()] as { id: string; path: string | null; source: string }[];
+        const entity = all.find((x) => x.id === args?.id) ?? repos[0];
+        const evidence = [
+          { id: 1, kind: "observed", detail: entity.path ? `found at ${entity.path}` : "found during scan", source: entity.source, confidence: "verified", observed_at: now - 2 * H },
+        ];
+        return { entity, evidence, outgoing: [], incoming: [] } as T;
       }
       if (cmd in responses) return responses[cmd] as T;
       throw `demo: no data for ${cmd}`;
     };
-  });
+  }, payload);
 }

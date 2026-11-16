@@ -95,6 +95,25 @@ test("capture pages", async ({ page }) => {
   await shot(page, "storage");
 });
 
+test("capture remaining sections", async ({ page }) => {
+  await installDemoIpc(page);
+  const pages: [string, string][] = [
+    ["discovery", "/#/discovery?tab=repositories&id=" + encodeURIComponent("repository:/Users/dev/code/acme-web")],
+    ["discovery-tools", "/#/discovery?tab=tools"],
+    ["ai-ecosystem", "/#/ai"],
+    ["ai-instructions", "/#/ai?tab=instructions"],
+    ["processes", "/#/processes"],
+    ["security", "/#/security"],
+    ["impact", "/#/impact?id=" + encodeURIComponent("package:homebrew:openssl@3")],
+    ["snapshots", "/#/snapshots"],
+  ];
+  for (const [name, url] of pages) {
+    await page.goto(url);
+    await page.waitForTimeout(900);
+    await shot(page, name);
+  }
+});
+
 test("capture dark hero", async ({ browser }) => {
   const ctx = await browser.newContext({ colorScheme: "dark", viewport: { width: 1360, height: 850 }, deviceScaleFactor: 2, baseURL: "http://127.0.0.1:1420" });
   const page = await ctx.newPage();
@@ -107,7 +126,7 @@ test("capture dark hero", async ({ browser }) => {
 
 test("frame screenshots and build the GIF", async ({ browser }) => {
   const page = await (await browser.newContext({ deviceScaleFactor: 2 })).newPage();
-  for (const n of ["overview", "agents", "agents-expanded", "usage", "operator", "review", "graph", "storage"]) await frame(page, n);
+  for (const n of ["overview", "agents", "agents-expanded", "usage", "operator", "review", "graph", "storage", "discovery", "discovery-tools", "ai-ecosystem", "ai-instructions", "processes", "security", "impact", "snapshots"]) await frame(page, n);
   await frame(page, "agents-dark", true);
 
   // GIF: a short tour, each step held ~2.2 s, scaled to 1200 px wide with an optimised palette.
