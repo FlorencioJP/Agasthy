@@ -8,6 +8,7 @@ import { Kv, PageHeader, Panel } from "../components/page";
 import { SCAN_LABELS, progressLabel, useScanActivity } from "../components/scan-activity";
 import { formatDateTime, formatNumber, formatRelative, shortenHome } from "../lib/format";
 import { api, errorMessage, pickFolder, revealInFileManager } from "../lib/ipc";
+import { autoCheckEnabled, checkForUpdate, installUpdate, setAutoCheck, updatesSupported, useUpdateState } from "../lib/updates";
 import { useAppInfo, useAudit, useInvalidateData, useScanRoots, useScans } from "../lib/queries";
 
 export function SettingsPage() {
@@ -310,6 +311,7 @@ function AboutPanel() {
             ],
             ["Database", <code className="selectable font-mono text-[11.5px]">{info.data.db_path}</code>],
             ["Schema version", info.data.schema_version],
+            ["Updates", <UpdatesRow />],
             [
               "Diagnostics log",
               <span className="flex flex-wrap items-center gap-2">
@@ -323,5 +325,43 @@ function AboutPanel() {
         />
       ) : null}
     </Panel>
+  );
+}
+
+function UpdatesRow() {
+  const s = useUpdateState();
+  const [auto, setAuto] = useState(autoCheckEnabled());
+  if (!updatesSupported()) return <span className="text-muted">Available in the installed app.</span>;
+  return (
+    <span className="flex flex-col gap-1.5">
+      <span className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1.5">
+          <input
+            type="checkbox"
+            checked={auto}
+            onChange={(e) => {
+              setAutoCheck(e.target.checked);
+              setAuto(e.target.checked);
+            }}
+          />
+          Check for updates when AGASTHY starts
+        </label>
+        <Button size="sm" variant="ghost" disabled={s.status === "checking" || s.status === "installing"} onClick={() => void checkForUpdate()}>
+          {s.status === "checking" ? "Checking…" : "Check now"}
+        </Button>
+        {s.status === "available" ? (
+          <Button size="sm" variant="primary" onClick={() => void installUpdate()}>
+            Install {s.version} and restart
+          </Button>
+        ) : null}
+      </span>
+      <span className="text-[11.5px] text-muted">
+        {s.status === "none"
+          ? "You have the latest version."
+          : s.status === "error"
+            ? `Could not check: ${s.message}`
+            : "Asks github.com for the latest release. Nothing about your machine is sent; updates are signature-checked and only installed when you click Install."}
+      </span>
+    </span>
   );
 }

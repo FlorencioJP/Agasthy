@@ -13,6 +13,16 @@ AGASTHY is an open-source, local-first desktop application that discovers what i
 
 > **Status: early development (v0.1.0, Phase 5).** It runs on macOS. It has not been published or released, and nothing here is offered as a download yet.
 
+## Install (macOS, Apple silicon)
+
+1. Download the latest `AGASTHY-…-apple-silicon.dmg` from [Releases](https://github.com/HMAKT99/agasthy/releases) (macOS 12 or later).
+2. Open it and drag **AGASTHY** to **Applications**.
+3. The first time, right-click AGASTHY in Applications and choose **Open**. Releases are not yet notarized by Apple, so macOS asks once. If macOS says the app is damaged, run `xattr -dr com.apple.quarantine /Applications/AGASTHY.app` and open it again.
+
+AGASTHY lives in the menu bar as well as its window; closing the window keeps it running, and **Quit AGASTHY** is in the menu-bar menu. It offers new versions itself (signature-checked, installed only when you click **Install and restart**); this can be turned off in Settings → About.
+
+Intel Macs, Windows and Linux are not released yet (see [Supported platforms](#supported-platforms)).
+
 ## Why it exists
 
 A developer machine accumulates hundreds of components spread across directories, terminals and configuration files: cloned repositories, applications, CLI tools, several copies of the same runtime, packages from several package managers, and more. Answering simple questions, such as "which Python actually runs?", "what did Homebrew install?" or "which of my clones have uncommitted work?", means running a dozen commands.
@@ -40,6 +50,9 @@ AGASTHY reads the machine directly and keeps what it finds, plus the evidence be
 | **Snapshots** | Record installed software, repositories (commit, branch, remote) and environment variable names; compare snapshots; list the commands that would bring back what is missing. Metadata only, not a backup. |
 | **Security & lifecycle** | Outdated Homebrew packages, tools of unknown origin, and, if you opt in, OSV.dev advisories for npm, PyPI, crates.io and Go packages with exact versions. |
 | **AI Operator** | Ask questions in plain language: *what is using my RAM*, *free 10 GB safely*, *which repos have I not touched in 90 days*, *which MCP servers are configured*, *what breaks if I remove openssl@3*. A built-in mode answers common questions with no AI model and sends nothing anywhere. Optionally connect a local model (Ollama, LM Studio, vLLM, LocalAI) or, after a separate opt-in, a cloud model (Anthropic, OpenAI, Gemini, OpenRouter, any OpenAI-compatible endpoint). The model can only read through AGASTHY's typed tools and *propose* changes; every proposal opens the same dry-run review as the rest of the app. |
+| **Agents** | Every running coding-agent session (Claude Code, Codex, Gemini CLI, Cursor Agent, Aider, Hermes Agent, OpenClaw and more, plus any process that starts MCP servers) with its process tree, memory, ports and MCP/dev servers; what is still running after an agent exits, with one reviewed action to stop it; Git worktrees agents work in. |
+| **Token Usage** | Tokens, requests and estimated cost per day, session, project folder and model, read from Claude Code and Codex logs and Hermes Agent's database. Counters only, never message text. |
+| **Insights & menu bar** | A ranked list of what needs attention (low disk, swap pressure, processes agents left running, token spikes, stale data, security findings), and a menu-bar item with the same at a glance. |
 | **Audit & privacy** | An append-only audit log of every action, and a privacy page listing exactly which programs AGASTHY may run. |
 
 Repositories, installed packages, binaries on PATH and applications are kept as **separate kinds**. A local clone is never treated as installed software.
@@ -117,17 +130,17 @@ cargo run -p agasthy-cli -- telemetry
 cargo run -p agasthy-cli -- impact runtime:/usr/local/bin/python3 --db <file>
 ```
 
-Build an unsigned macOS app bundle:
+Build a DMG (unsigned unless Apple credentials are set; see [docs/releasing.md](docs/releasing.md)):
 
 ```sh
-pnpm build               # output: target/release/bundle/macos/AGASTHY.app
+pnpm release:mac         # output: dist/AGASTHY-<version>-apple-silicon.dmg
 ```
 
 Details: [docs/development.md](docs/development.md).
 
 ## Privacy
 
-AGASTHY makes no internet requests unless you turn on OSV.dev advisory checks: no account, telemetry or update checks (the AI scan only checks whether local inference engines are listening on 127.0.0.1). It only looks for repositories in folders you add, stores results in a local SQLite file, and strips credentials from Git URLs before storing them. It runs external programs only from an allowlist, with fixed arguments and never through a shell. Full details: [docs/privacy.md](docs/privacy.md).
+AGASTHY has no account, telemetry or analytics. Its only network requests are: an update check against this repository's GitHub Releases at start-up (can be turned off; sends nothing about your machine), OSV.dev advisory checks if you turn them on, and an AI model endpoint if you configure one (cloud models need a separate opt-in). The AI scan only checks whether local inference engines are listening on 127.0.0.1. It only looks for repositories in folders you add, stores results in a local SQLite file, and strips credentials from Git URLs before storing them. It runs external programs only from an allowlist, with fixed arguments and never through a shell. Full details: [docs/privacy.md](docs/privacy.md).
 
 ## Roadmap
 

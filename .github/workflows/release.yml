@@ -1,0 +1,96 @@
+name: Release
+
+# Push a tag that matches the app version (e.g. v0.2.0) to build the macOS app,
+# sign the update archive, and create a DRAFT GitHub release. Review the draft
+# and publish it; installed copies then see the update.
+#
+# Required secret:  TAURI_SIGNING_PRIVATE_KEY (contents of ~/.tauri/agasthy-updater.key)
+# Optional secret:  TAURI_SIGNING_PRIVATE_KEY_PASSWORD (if the key has one)
+# Optional secrets for a signed, notarized app (Apple Developer account):
+#   APPLE_CERTIFICATE (base64 .p12), APPLE_CERTIFICATE_PASSWORD,
+#   APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  macos:
+    name: macOS (Apple silicon)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check the tag matches the app version
+        run: |
+          v=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
+          test "${GITHUB_REF_NAME}" = "v${v}" || { echo "tag ${GITHUB_REF_NAME} != v${v}"; exit 1; }
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Tests
+        run: |
+          cargo test --workspace
+          pnpm typecheck
+          pnpm test
+
+      - name: Import Apple certificate (only if configured)
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        if: env.APPLE_CERTIFICATE != ''
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+          KC_PASS=$(openssl rand -hex 16)
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KC_PASS" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KC_PASS" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KC_PASS" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+
+      - name: Build DMG and signed update archive
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: pnpm release:mac
+
+      - name: Updater manifest
+        run: node scripts/updater-manifest.mjs --repo "$GITHUB_REPOSITORY" --tag "$GITHUB_REF_NAME"
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
+          ## Install
+
+          1. Download `AGASTHY-…-apple-silicon.dmg` below (Apple silicon Macs, macOS 12 or later).
+          2. Open it and drag **AGASTHY** to **Applications**.
+          3. The first time, right-click AGASTHY in Applications and choose **Open** (this build is not notarized by Apple).
+
+          Installed copies offer this update automatically; nothing is installed until you click **Install and restart**.
+
+          See [CHANGELOG.md](CHANGELOG.md) for what changed.
+          NOTES
+          gh release create "$GITHUB_REF_NAME" dist/* --draft --title "AGASTHY ${GITHUB_REF_NAME}" --notes-file "$RUNNER_TEMP/notes.md"

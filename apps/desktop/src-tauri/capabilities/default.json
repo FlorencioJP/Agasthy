@@ -53,6 +53,8 @@
     "allow-agent-usage",
     "allow-insights",
     "allow-scan-schedule",
-    "allow-set-auto-refresh"
+    "allow-set-auto-refresh",
+    "updater:default",
+    "process:allow-restart"
   ]
 }

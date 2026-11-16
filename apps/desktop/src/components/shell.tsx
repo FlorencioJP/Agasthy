@@ -5,6 +5,7 @@ import { Activity, Bot, Coins, Boxes, Camera, Gauge, GitCompareArrows, HardDrive
 import { inDesktopShell, onNavigate } from "../lib/ipc";
 import { useAppInfo } from "../lib/queries";
 import { SCAN_LABELS, useScanActivity } from "./scan-activity";
+import { UpdateBanner } from "./update-banner";
 
 // Only sections with a working implementation appear here.
 const NAV = [
@@ -100,6 +101,7 @@ export function Shell() {
         </SidebarSection>
       </Sidebar>
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        <UpdateBanner />
         <Outlet />
       </main>
     </div>

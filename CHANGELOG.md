@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added (release readiness)
+- In-app updates from GitHub Releases: signature-verified, installed only after confirmation, start-up check can be turned off.
+- Release workflow (`.github/workflows/release.yml`) producing a draft GitHub release with the DMG and updater manifest.
 - Background tasks recover from internal errors instead of stopping; shared state locks are recovered after a failure.
 - A page that fails to render shows an error with "Try again" instead of a blank window.
 - Local diagnostics log (`logs/agasthy.log`, rotated, home folder shown as `~`, never uploaded); Settings → About links to it.
