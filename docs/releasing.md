@@ -21,5 +21,5 @@ git tag v0.2.0 && git push origin main v0.2.0
 ```sh
 pnpm release:mac                                   # unsigned DMG in dist/
 TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/agasthy-updater.key)" pnpm release:mac
-node scripts/updater-manifest.mjs --repo HMAKT99/agasthy   # dist/latest.json + update archive
+node scripts/updater-manifest.mjs --repo HMAKT99/Agasthy   # dist/latest.json + update archive
 ```

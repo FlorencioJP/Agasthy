@@ -51,7 +51,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEEwOUNDRTlENjYzQUE3NzcKUldSM3B6cG1uYzZjb0JYNnlZUTRZVW9rTmN3QW5LVjE4SXhNZXRqb09TdFV5bjF5Z1Y5VG1BdGIK",
       "endpoints": [
-        "https://github.com/HMAKT99/agasthy/releases/latest/download/latest.json"
+        "https://github.com/HMAKT99/Agasthy/releases/latest/download/latest.json"
       ]
     }
   }

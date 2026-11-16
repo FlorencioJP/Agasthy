@@ -15,7 +15,7 @@ AGASTHY is an open-source, local-first desktop application that discovers what i
 
 ## Install (macOS, Apple silicon)
 
-1. Download the latest `AGASTHY-…-apple-silicon.dmg` from [Releases](https://github.com/HMAKT99/agasthy/releases) (macOS 12 or later).
+1. Download the latest `AGASTHY-…-apple-silicon.dmg` from [Releases](https://github.com/HMAKT99/Agasthy/releases) (macOS 12 or later).
 2. Open it and drag **AGASTHY** to **Applications**.
 3. The first time, right-click AGASTHY in Applications and choose **Open**. Releases are not yet notarized by Apple, so macOS asks once. If macOS says the app is damaged, run `xattr -dr com.apple.quarantine /Applications/AGASTHY.app` and open it again.
 
