@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use rusqlite::{Connection, OptionalExtension, Transaction, params};
+use rusqlite::{Connection, OpenFlags, OptionalExtension, Transaction, params};
 
 use crate::error::{CoreError, CoreResult};
 use crate::model::*;
@@ -42,6 +42,40 @@ impl Store {
         };
         store.configure()?;
         store.migrate()?;
+        Ok(store)
+    }
+
+    /// Open an existing database for reading only, for example the desktop
+    /// app's database from the command line while the app runs. Never
+    /// creates the file, never migrates, and SQLite rejects any write.
+    pub fn open_read_only(path: &Path) -> CoreResult<Self> {
+        if !path.is_file() {
+            return Err(CoreError::InvalidInput(format!(
+                "no AGASTHY database at {}",
+                path.display()
+            )));
+        }
+        let conn = Connection::open_with_flags(
+            path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        conn.busy_timeout(std::time::Duration::from_secs(5))?;
+        let store = Self {
+            conn,
+            path: Some(path.to_path_buf()),
+        };
+        let found = store.schema_version()?;
+        if found > SCHEMA_VERSION {
+            return Err(CoreError::SchemaTooNew {
+                found,
+                supported: SCHEMA_VERSION,
+            });
+        }
+        if found < SCHEMA_VERSION {
+            return Err(CoreError::InvalidInput(format!(
+                "the database is from an older AGASTHY (schema {found}, expected {SCHEMA_VERSION}); open the AGASTHY app once to upgrade it"
+            )));
+        }
         Ok(store)
     }
 
@@ -876,6 +910,48 @@ mod tests {
                 "unit-test",
                 Confidence::Verified,
             )],
+        }
+    }
+
+    #[test]
+    fn read_only_open_reads_but_never_writes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("agasthy.db");
+        assert!(
+            Store::open_read_only(&path).is_err(),
+            "must not create a database"
+        );
+        assert!(!path.exists());
+        drop(Store::open(&path).unwrap());
+        let ro = Store::open_read_only(&path).unwrap();
+        assert_eq!(ro.schema_version().unwrap(), SCHEMA_VERSION);
+        assert!(
+            ro.list_entities(&EntityQuery {
+                kind: None,
+                text: None,
+                limit: None,
+                offset: None,
+            })
+            .unwrap()
+            .is_empty()
+        );
+        assert!(
+            ro.begin_scan(ScanKind::Software).is_err(),
+            "writes must fail"
+        );
+    }
+
+    #[test]
+    fn read_only_open_rejects_an_old_schema() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("old.db");
+        let c = Connection::open(&path).unwrap();
+        c.execute_batch(MIGRATIONS[0]).unwrap();
+        c.pragma_update(None, "user_version", 1u32).unwrap();
+        drop(c);
+        if SCHEMA_VERSION > 1 {
+            let err = Store::open_read_only(&path).err().unwrap().to_string();
+            assert!(err.contains("older AGASTHY"), "{err}");
         }
     }
 

@@ -1,7 +1,8 @@
 name: Release
 
-# Push a tag that matches the app version (e.g. v0.2.0) to build the macOS app
-# and the Windows preview installer, sign the update files, and create a DRAFT
+# Push a tag that matches the app version (e.g. v0.2.0) to build the macOS app,
+# the Windows and Linux previews and the command-line tool for each, sign the
+# update files, and create a DRAFT
 # GitHub release. Review the draft and publish it; installed copies then see
 # the update.
 #
@@ -76,6 +77,14 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm release:mac
 
+      - name: Command-line tool (for agents and scripts)
+        run: |
+          cargo build --release -p agasthy-cli
+          mkdir -p cli && cp target/release/agasthy cli/
+          tar -C cli -czf dist/agasthy-cli-macos-aarch64.tar.gz agasthy
+          (cd dist && shasum -a 256 agasthy-cli-macos-aarch64.tar.gz > agasthy-cli-macos-aarch64.tar.gz.sha256)
+          mkdir -p check && tar -C check -xzf dist/agasthy-cli-macos-aarch64.tar.gz && ./check/agasthy --version
+
       - uses: actions/upload-artifact@v4
         with:
           name: macos
@@ -110,6 +119,18 @@ jobs:
           cp "$setup" "dist/AGASTHY_${v}_x64-setup.exe"
           cp "$setup.sig" "dist/AGASTHY_${v}_x64-setup.exe.sig"
           (cd dist && sha256sum "AGASTHY_${v}_x64-setup.exe" > "AGASTHY_${v}_x64-setup.exe.sha256")
+
+      - name: Command-line tool (for agents and scripts)
+        shell: pwsh
+        run: |
+          cargo build --release -p agasthy-cli
+          New-Item -ItemType Directory -Force cli | Out-Null
+          Copy-Item target/release/agasthy.exe cli/
+          Compress-Archive -Path cli/agasthy.exe -DestinationPath dist/agasthy-cli-windows-x86_64.zip -Force
+          $h = (Get-FileHash dist/agasthy-cli-windows-x86_64.zip -Algorithm SHA256).Hash.ToLower()
+          "$h  agasthy-cli-windows-x86_64.zip" | Set-Content -NoNewline -Encoding ascii dist/agasthy-cli-windows-x86_64.zip.sha256
+          Expand-Archive dist/agasthy-cli-windows-x86_64.zip -DestinationPath check -Force
+          ./check/agasthy.exe --version
 
       - uses: actions/upload-artifact@v4
         with:
@@ -152,6 +173,14 @@ jobs:
           cp "$deb" "dist/agasthy_${v}_amd64.deb"
           (cd dist && sha256sum "AGASTHY_${v}_amd64.AppImage" > "AGASTHY_${v}_amd64.AppImage.sha256" && sha256sum "agasthy_${v}_amd64.deb" > "agasthy_${v}_amd64.deb.sha256")
 
+      - name: Command-line tool (for agents and scripts)
+        run: |
+          cargo build --release -p agasthy-cli
+          mkdir -p cli && cp target/release/agasthy cli/
+          tar -C cli -czf dist/agasthy-cli-linux-x86_64.tar.gz agasthy
+          (cd dist && sha256sum agasthy-cli-linux-x86_64.tar.gz > agasthy-cli-linux-x86_64.tar.gz.sha256)
+          mkdir -p check && tar -C check -xzf dist/agasthy-cli-linux-x86_64.tar.gz && ./check/agasthy --version
+
       - uses: actions/upload-artifact@v4
         with:
           name: linux
@@ -185,6 +214,8 @@ jobs:
           **macOS (Apple silicon, macOS 12+):** download `AGASTHY-…-apple-silicon.dmg` and drag AGASTHY to Applications. The first time, macOS says it cannot verify the developer (the app is not notarized by Apple yet): open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
 
           **Linux (x64, preview):** download `AGASTHY_…_amd64.AppImage`, make it executable (`chmod +x`) and run it, or install `agasthy_…_amd64.deb` with `sudo apt install ./agasthy_…_amd64.deb`.
+
+          **Command-line tool and agent skill:** `agasthy-cli-…` lets coding agents and scripts query what AGASTHY found (read-only, JSON). For OpenClaw, Hermes and Claude Code, install the AGASTHY skill: see [integrations/agent-skill](https://github.com/HMAKT99/Agasthy/tree/main/integrations/agent-skill).
 
           **Windows (x64, preview):** download `AGASTHY_…_x64-setup.exe` and run it. Windows SmartScreen will warn because the installer is not code-signed yet: choose **More info → Run anyway**. See the README for what works on Windows today.
 

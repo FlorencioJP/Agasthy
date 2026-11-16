@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-11-17
+
+- **AGASTHY skill for coding agents** (`integrations/agent-skill`): OpenClaw, Hermes, Claude Code and other Agent Skills readers can answer questions about your machine from AGASTHY's data. Read-only; changes stay with you.
+- **Command-line tool in every release** (`agasthy-cli-…` for macOS, Windows and Linux), with new commands: `status`, `find`, `entity` and `agents`. Query commands read the app's database read-only by default, so agents use what the app already scanned; `impact` and `shared` no longer need `--db`. `--version`; options work before or after the command.
+- **Release checks** now download and run the released command-line tool on all three systems.
+
 ## [0.1.3] - 2026-11-16
 
 - **macOS:** the whole app bundle is now ad-hoc signed. 0.1.2 downloaded through a browser could be reported as "damaged"; 0.1.3 gets the normal "cannot verify the developer" prompt (allow it once in System Settings → Privacy & Security).

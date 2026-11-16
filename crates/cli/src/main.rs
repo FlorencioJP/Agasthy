@@ -1,7 +1,10 @@
 //! `agasthy` — headless discovery.
 //!
 //! Prints JSON to stdout. Read-only: it never modifies the machine. With
-//! `--db <file>` results are also written to an AGASTHY database at that path.
+//! `--db <file>` the scan commands also write their results to an AGASTHY
+//! database at that path. The query commands (`status`, `find`, `entity`,
+//! `impact`, `shared`) read the desktop app's database read-only by default,
+//! so agents and scripts can use what the app has already scanned.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -15,22 +18,89 @@ use agasthy_system_monitor::Monitor;
 const USAGE: &str = "\
 agasthy — read-only developer machine discovery
 
-USAGE:
-    agasthy scan <folder>... [--depth N] [--db FILE] [--full]
-    agasthy software [--db FILE] [--full]
-    agasthy ai [--db FILE] [--full]        (projects come from repositories in --db)
-    agasthy impact <entity-id> --db FILE          (what if it were removed?)
-    agasthy security --db FILE                    (local checks only; never contacts OSV)
-    agasthy shared --db FILE
-    agasthy packages [--db FILE] [--full]
-    agasthy telemetry
+QUERY WHAT THE APP ALREADY SCANNED (reads the AGASTHY app's database read-only;
+--db FILE reads another database instead):
+    agasthy status                                (database, last scans and their age, counts)
+    agasthy find [text] [--kind KIND] [--limit N] (search repositories, packages, tools, ...)
+    agasthy entity <entity-id>                    (one entity with its evidence and relationships)
+    agasthy impact <entity-id>                    (what if it were removed?)
+    agasthy shared                                (dependencies shared by the most projects)
+
+LIVE (nothing stored):
+    agasthy agents                         (coding-agent sessions and what they left running)
+    agasthy processes                      (processes, ports and the project each belongs to)
     agasthy usage [--days N] [--full]      (coding-agent token usage from their local logs; counters only)
-    agasthy processes [--db FILE]          (read-only; --db links processes to repositories)
-    agasthy disk [folder...] [--db FILE]   (read-only cleanup analysis; folders act as approved roots)
+    agasthy telemetry
     agasthy platform
 
+SCANS (with --db FILE, results are also written to that database):
+    agasthy scan <folder>... [--depth N] [--db FILE] [--full]
+    agasthy software [--db FILE] [--full]
+    agasthy ai [--db FILE] [--full]
+    agasthy packages [--db FILE] [--full]
+    agasthy disk [folder...]               (read-only cleanup analysis; folders act as approved roots)
+    agasthy security --db FILE             (local checks only; never contacts OSV; writes findings to FILE)
+
+    agasthy --version
+
 Output is JSON. Without --full, a summary is printed instead of every entity.
+KINDS: repository, application, tool, runtime, package, package_manager, ai_tool,
+       ai_provider, mcp_server, ai_config_file, finding, ...
 ";
+
+/// Where the desktop app keeps its database (Tauri's app data directory).
+fn app_db_path() -> Option<PathBuf> {
+    dirs::data_dir().map(|d| d.join("org.agasthy.desktop").join("agasthy.db"))
+}
+
+/// The database to read: `--db FILE` if given, otherwise the app's database.
+fn read_store(db: &Option<PathBuf>) -> Result<Store, String> {
+    let path = match db {
+        Some(p) => p.clone(),
+        None => app_db_path().ok_or("cannot find the user data directory")?,
+    };
+    Store::open_read_only(&path).map_err(|e| {
+        if db.is_none() {
+            format!("{e}. Open the AGASTHY app and run a scan first, or pass --db FILE.")
+        } else {
+            e.to_string()
+        }
+    })
+}
+
+/// Repositories from the database, for linking processes to projects.
+/// Missing or unreadable database: no links, not an error.
+fn known_repos(db: &Option<PathBuf>) -> Vec<(String, String, PathBuf, u32)> {
+    let Ok(store) = read_store(db) else {
+        return Vec::new();
+    };
+    store
+        .list_entities(&agasthy_core::EntityQuery {
+            kind: Some(agasthy_core::EntityKind::Repository),
+            text: None,
+            limit: Some(5000),
+            offset: None,
+        })
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|e| {
+            let d = e
+                .attributes
+                .get("clones_of_same_remote")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(1) as u32;
+            e.path.map(|p| (e.id, e.name, PathBuf::from(p), d))
+        })
+        .collect()
+}
+
+fn print_json(v: &serde_json::Value) -> Result<(), String> {
+    println!(
+        "{}",
+        serde_json::to_string_pretty(v).map_err(|e| e.to_string())?
+    );
+    Ok(())
+}
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -65,9 +135,16 @@ fn run(raw: &[String]) -> Result<(), String> {
         print!("{USAGE}");
         return Ok(());
     }
-    let cmd = args.remove(0);
+    if take_flag(&mut args, "--version") || take_flag(&mut args, "-V") {
+        println!("agasthy {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
     let db = take_opt(&mut args, "--db").map(PathBuf::from);
     let full = take_flag(&mut args, "--full");
+    if args.is_empty() {
+        return Err(format!("missing command\n\n{USAGE}"));
+    }
+    let cmd = args.remove(0);
     let platform = agasthy_platform::current();
     let runner = agasthy_platform::system_runner(platform.as_ref(), &catalog::tool_ids());
 
@@ -100,51 +177,27 @@ fn run(raw: &[String]) -> Result<(), String> {
         "software" => scan_software(platform.as_ref(), &runner, &agasthy_discovery::no_progress),
         "packages" => scan_packages(platform.as_ref(), &runner, &agasthy_discovery::no_progress),
         "ai" => {
-            let projects = match &db {
-                Some(path) => Store::open(path)
-                    .and_then(|s| {
-                        s.list_entities(&agasthy_core::EntityQuery {
-                            kind: Some(agasthy_core::EntityKind::Repository),
-                            text: None,
-                            limit: Some(5000),
-                            offset: None,
-                        })
-                    })
-                    .map_err(|e| e.to_string())?
-                    .into_iter()
-                    .filter_map(|e| e.path.map(|p| (e.id, PathBuf::from(p))))
-                    .collect(),
-                None => Vec::new(),
-            };
+            let projects = known_repos(&db)
+                .into_iter()
+                .map(|(id, _, p, _)| (id, p))
+                .collect();
             let home = platform.home_dir().ok_or("no home directory")?;
             let opts = agasthy_discovery::AiScanOptions::new(home, projects);
             agasthy_discovery::scan_ai(platform.as_ref(), &opts, &agasthy_discovery::no_progress)
         }
-        "processes" | "disk" => {
-            let repos: Vec<(String, String, PathBuf, u32)> = match &db {
-                Some(path) => Store::open(path)
-                    .and_then(|s| {
-                        s.list_entities(&agasthy_core::EntityQuery {
-                            kind: Some(agasthy_core::EntityKind::Repository),
-                            text: None,
-                            limit: Some(5000),
-                            offset: None,
-                        })
-                    })
-                    .map_err(|e| e.to_string())?
-                    .into_iter()
-                    .filter_map(|e| {
-                        let d = e
-                            .attributes
-                            .get("clones_of_same_remote")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(1) as u32;
-                        e.path.map(|p| (e.id, e.name, PathBuf::from(p), d))
-                    })
-                    .collect(),
-                None => Vec::new(),
-            };
-            let out = if cmd == "processes" {
+        "processes" | "disk" | "agents" => {
+            let repos = known_repos(&db);
+            let out = if cmd == "agents" {
+                let mut m = agasthy_process::ProcessMonitor::new();
+                let refs: Vec<agasthy_process::RepoRef> = repos
+                    .iter()
+                    .map(|(i, n, p, _)| (i.clone(), n.clone(), p.clone()))
+                    .collect();
+                let mut tracker = agasthy_process::agents::AgentTracker::new();
+                tracker.update(&m.snapshot(&runner, &refs));
+                std::thread::sleep(std::time::Duration::from_millis(400));
+                serde_json::to_value(tracker.update(&m.snapshot(&runner, &refs)))
+            } else if cmd == "processes" {
                 let mut m = agasthy_process::ProcessMonitor::new();
                 let refs: Vec<agasthy_process::RepoRef> = repos
                     .iter()
@@ -247,9 +300,87 @@ fn run(raw: &[String]) -> Result<(), String> {
             );
             return Ok(());
         }
+        "status" => {
+            let store = read_store(&db)?;
+            let now = agasthy_core::time::now_ms();
+            let scans: Vec<serde_json::Value> = store
+                .latest_scans()
+                .map_err(|e| e.to_string())?
+                .into_iter()
+                .map(|s| {
+                    let at = s.finished_at.unwrap_or(s.started_at);
+                    serde_json::json!({
+                        "kind": s.kind,
+                        "status": s.status,
+                        "finished_at": s.finished_at,
+                        "age_hours": ((now - at) as f64 / 3_600_000.0 * 10.0).round() / 10.0,
+                        "entities_found": s.entities_found,
+                    })
+                })
+                .collect();
+            return print_json(&serde_json::json!({
+                "database": store.path(),
+                "last_scans": scans,
+                "entities_by_kind": store.counts_by_kind().map_err(|e| e.to_string())?,
+                "note": "Data is as of each scan's time. Scans run from the AGASTHY app.",
+            }));
+        }
+        "find" => {
+            let kind = match take_opt(&mut args, "--kind") {
+                Some(k) => Some(
+                    agasthy_core::EntityKind::parse(&k)
+                        .ok_or_else(|| format!("unknown kind `{k}`"))?,
+                ),
+                None => None,
+            };
+            let limit = take_opt(&mut args, "--limit")
+                .map(|n| {
+                    n.parse::<u32>()
+                        .map_err(|_| "--limit must be a number".to_string())
+                })
+                .transpose()?
+                .unwrap_or(50)
+                .clamp(1, 500);
+            let text = (!args.is_empty()).then(|| args.join(" "));
+            let store = read_store(&db)?;
+            let found = store
+                .list_entities(&agasthy_core::EntityQuery {
+                    kind,
+                    text,
+                    limit: Some(limit),
+                    offset: None,
+                })
+                .map_err(|e| e.to_string())?;
+            let items: Vec<serde_json::Value> = found
+                .iter()
+                .map(|e| {
+                    if full {
+                        serde_json::to_value(e).unwrap_or_default()
+                    } else {
+                        serde_json::json!({
+                            "id": e.id, "kind": e.kind, "name": e.name,
+                            "version": e.version, "path": e.path, "source": e.source,
+                        })
+                    }
+                })
+                .collect();
+            return print_json(
+                &serde_json::json!({ "count": items.len(), "limit": limit, "entities": items }),
+            );
+        }
+        "entity" => {
+            let id = args
+                .first()
+                .ok_or("entity needs an entity id (from `agasthy find`)")?;
+            let store = read_store(&db)?;
+            let detail = store
+                .entity_detail(id)
+                .map_err(|e| e.to_string())?
+                .ok_or_else(|| format!("no entity with id `{id}`"))?;
+            return print_json(&serde_json::to_value(detail).map_err(|e| e.to_string())?);
+        }
         "impact" | "shared" => {
-            let db = db.ok_or("this command needs --db FILE")?;
-            let store = Store::open(&db).map_err(|e| e.to_string())?;
+            let store = read_store(&db)?;
             let out = if cmd == "impact" {
                 let id = args.first().ok_or("impact needs an entity id")?;
                 serde_json::to_value(

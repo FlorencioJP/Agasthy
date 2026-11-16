@@ -2,7 +2,7 @@ name: End-to-end smoke test
 
 # Installs the published files of a release (draft or not) on real macOS,
 # Windows and Linux runners, launches the app and checks that it started,
-# and runs the command-line discovery on each OS against a real Git repo.
+# and runs the released command-line tool on each OS against a real Git repo.
 #
 #   gh workflow run smoke.yml -f tag=v0.1.3
 
@@ -127,42 +127,56 @@ jobs:
           grep -q "start AGASTHY ${TAG#v}" "$HOME/.local/share/org.agasthy.desktop/logs/agasthy.log"
           pkill -f agasthy-desktop || true
 
-  cli-discovery:
-    name: Discovery on ${{ matrix.os }}
+  cli:
+    name: Command-line tool on ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-24.04]
+        include:
+          - os: macos-latest
+            archive: agasthy-cli-macos-aarch64.tar.gz
+          - os: windows-latest
+            archive: agasthy-cli-windows-x86_64.zip
+          - os: ubuntu-24.04
+            archive: agasthy-cli-linux-x86_64.tar.gz
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag }}
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Build the CLI
-        run: cargo build --release -p agasthy-cli
-      - name: Discover a real Git repository
+      - name: Download the released command-line tool
         run: |
-          work="$RUNNER_TEMP/code"
-          mkdir -p "$work/demo-app"
-          cd "$work/demo-app"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "${{ matrix.archive }}*"
+          if command -v sha256sum >/dev/null; then sha256sum -c "${{ matrix.archive }}.sha256"; else shasum -a 256 -c "${{ matrix.archive }}.sha256"; fi
+          mkdir -p bin
+          case "${{ matrix.archive }}" in
+            *.zip) unzip -q "${{ matrix.archive }}" -d bin ;;
+            *) tar -C bin -xzf "${{ matrix.archive }}" ;;
+          esac
+          echo "$PWD/bin" >> "$GITHUB_PATH"
+      - name: Version matches the release
+        run: test "$(agasthy --version)" = "agasthy ${TAG#v}"
+      - name: Scan a real Git repository, then query it like an agent would
+        run: |
+          work="$HOME/agasthy-smoke/code"
+          mkdir -p "$work/demo-app" && cd "$work/demo-app"
           git init -q && git config user.email ci@example.invalid && git config user.name CI
           echo '{"name":"demo-app","dependencies":{"react":"^19.0.0"}}' > package.json
           git add . && git commit -qm init
           echo "change" > notes.txt
           cd "$GITHUB_WORKSPACE"
-          out=$(./target/release/agasthy scan "$work" --full)
-          echo "$out" | head -c 2000
-          echo "$out" | grep -q '"demo-app"'
-          echo "$out" | grep -q 'untracked'
-      - name: Software, packages, processes and usage run cleanly
+          db="$HOME/agasthy-smoke/agasthy.db"
+          py=$(command -v python3 || command -v python)
+          agasthy scan "$work" --db "$db" > /dev/null
+          agasthy status --db "$db"
+          id=$(agasthy find demo-app --kind repository --db "$db" | "$py" -c "import json,sys; d=json.load(sys.stdin); assert d['count']==1, d; print(d['entities'][0]['id'])")
+          agasthy entity "$id" --db "$db" | "$py" -c "import json,sys; d=json.load(sys.stdin); w=d['entity']['attributes']['working_tree']['value']; assert w['untracked']==1, w; print('uncommitted work found:', w)"
+      - name: Live commands run cleanly
         run: |
-          for c in software packages processes usage platform; do
+          py=$(command -v python3 || command -v python)
+          for c in agents processes telemetry usage software packages platform; do
             echo "== $c"
-            ./target/release/agasthy $c > out.json
-            head -c 600 out.json; echo
+            agasthy $c > out.json
+            "$py" -c "import json; json.load(open('out.json'))"
+            head -c 400 out.json; echo
           done

@@ -65,6 +65,16 @@ A developer machine holds hundreds of moving parts: cloned repositories, several
 - **Evidence, not guesses.** Every fact has a source and a confidence level. What it cannot measure shows as *unavailable*, never as 0.
 - **Light.** About 0.4% CPU and under 100 MB in normal use. A 13 MB app.
 
+## Works with your coding agents
+
+Your agent can ask AGASTHY too. The **AGASTHY skill** gives OpenClaw, Hermes, Claude Code and other agents that read [Agent Skills](https://agentskills.io) real answers about your machine: which projects have uncommitted work, what is on port 3000, what your agents spent in tokens this week, and what breaks if a package goes.
+
+```bash
+hermes skills install HMAKT99/Agasthy/integrations/agent-skill/agasthy
+```
+
+It runs `agasthy`, the read-only command-line tool attached to each release, and leaves every change to you. Setup for each agent: [integrations/agent-skill](integrations/agent-skill).
+
 ## Install
 
 > [!IMPORTANT]

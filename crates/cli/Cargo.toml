@@ -1,6 +1,6 @@
 [package]
 name = "agasthy-cli"
-description = "Headless AGASTHY discovery, for verification and scripting"
+description = "AGASTHY on the command line: query what the app scanned, live agents, processes and token usage, as JSON"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -22,6 +22,10 @@ agasthy-process.workspace = true
 agasthy-cleanup.workspace = true
 agasthy-security.workspace = true
 serde_json.workspace = true
+dirs.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true
