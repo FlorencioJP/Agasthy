@@ -19,6 +19,9 @@ free disk space safely, and ask plain questions about your machine with evidence
   free and open source · no account · no telemetry
 </p>
 
+> [!NOTE]
+> **Please note: the first launch asks for your OK once.** AGASTHY is free and not yet signed with a paid Apple or Microsoft certificate, so your system shows a warning the first time. This is expected, and the [install steps](#install) show the one click to get past it. Every download is checksummed, built in public by [GitHub Actions](https://github.com/HMAKT99/Agasthy/actions), and in-app updates are signature-checked.
+
 https://github.com/user-attachments/assets/2718c8ae-1576-4c4f-a494-646731a019fa
 
 
@@ -63,6 +66,15 @@ A developer machine holds hundreds of moving parts: cloned repositories, several
 - **Light.** About 0.4% CPU and under 100 MB in normal use. A 13 MB app.
 
 ## Install
+
+> [!IMPORTANT]
+> **Expect one security prompt on first launch.** AGASTHY is not yet signed with a paid Apple Developer ID or a Windows code-signing certificate. That does not mean anything is wrong with the download; it means the operating system cannot check who published it.
+>
+> - **macOS:** "Apple could not verify AGASTHY is free of malware" → **System Settings → Privacy & Security → Open Anyway**.
+> - **Windows:** "Windows protected your PC" (SmartScreen) → **More info → Run anyway**.
+> - **Linux:** no prompt; just make the AppImage executable.
+>
+> You only do this once; updates install without it. To check a download yourself, compare it with the `.sha256` file next to it on the release page (`shasum -a 256 <file>` on macOS, `Get-FileHash <file>` on Windows, `sha256sum <file>` on Linux).
 
 **macOS (Apple silicon, macOS 12+)**
 

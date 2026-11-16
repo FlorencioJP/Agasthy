@@ -177,6 +177,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
+          > [!IMPORTANT]
+          > **Please note: expect one security prompt on first launch.** AGASTHY is not yet signed with a paid Apple or Microsoft certificate, so macOS and Windows warn the first time. This is expected; the steps below get past it in one click, and you only do it once. Each file has a `.sha256` checksum next to it, and in-app updates are signature-checked.
+
           ## Install
 
           **macOS (Apple silicon, macOS 12+):** download `AGASTHY-…-apple-silicon.dmg` and drag AGASTHY to Applications. The first time, macOS says it cannot verify the developer (the app is not notarized by Apple yet): open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
