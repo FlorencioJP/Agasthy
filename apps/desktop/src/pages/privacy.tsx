@@ -22,6 +22,10 @@ export function PrivacyPage() {
       <div className="flex max-w-4xl flex-col gap-4 p-5">
         <Panel title="Transmits">
           <div className="flex flex-col gap-3">
+            <Item title="Optional: OSV.dev advisory checks (off by default).">
+              If you turn this on in Security, each check sends package name, ecosystem and version triples to api.osv.dev. Nothing else. The Security page
+              shows exactly what would be sent first.
+            </Item>
             <Item title="AGASTHY makes no internet requests in this build.">
               No account, no telemetry, no analytics, no update checks. Nothing about your machine, your code or your configuration is uploaded.
             </Item>

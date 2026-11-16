@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-labs-list"
+description = "Enables the labs_list command without any pre-configured scope."
+commands.allow = ["labs_list"]
+
+[[permission]]
+identifier = "deny-labs-list"
+description = "Denies the labs_list command without any pre-configured scope."
+commands.deny = ["labs_list"]

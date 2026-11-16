@@ -82,10 +82,13 @@ A box is ticked only when the item is implemented **and** verified. Anything par
 
 ## Phase 5: Advanced intelligence
 
-- [ ] Change impact simulator
-- [ ] Safe Update Lab (git worktrees; scripts only with approval)
-- [ ] Environment snapshots and comparison
-- [ ] Security and lifecycle data (OSV and others; network use opt-in)
+- [x] Change impact simulator for packages, runtimes, dependencies, tools and apps (Homebrew dependents from installed kegs' runtime dependencies, transitive; runtimes provided by dependents; projects affected), with risk, unknowns, plan and recovery
+- [x] Safe Update Lab: Git worktree per lab; manifest edit without reformatting; install (scripts off unless allowed) and test as separately approved actions; apply only manifest + lockfile when the project is unchanged; discard
+- [x] Environment snapshots: capture, list, compare (two snapshots or with now), reconstruction commands for missing items (not run by AGASTHY)
+- [x] Security and lifecycle: outdated Homebrew packages, unknown-provenance tools, opt-in OSV.dev advisories with a preview of exactly what is sent
+- [ ] OSV coverage for more ecosystems and transitive dependencies from lockfiles
+- [ ] Archived / unmaintained upstream detection (needs GitHub API, opt-in)
+- [ ] Update Lab for pip/uv and Yarn; build step; side-by-side test comparison with the original
 
 ## Phase 6: AI operator and platforms
 

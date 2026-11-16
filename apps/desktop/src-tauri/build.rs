@@ -27,6 +27,14 @@ const COMMANDS: &[&str] = &[
     "quarantine_list",
     "plan_action",
     "execute_action",
+    "removal_impact",
+    "snapshots_list",
+    "snapshot_create",
+    "snapshot_compare",
+    "snapshot_reconstruction",
+    "security_settings",
+    "set_osv_enabled",
+    "labs_list",
 ];
 
 fn main() {

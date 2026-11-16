@@ -5,12 +5,14 @@
 //! `crates/` workspace members.
 
 mod commands;
+mod intel;
 mod ops;
 mod state;
 
 use tauri::Manager;
 
 pub use commands::{AppInfo, Overview, ScanEvent, SearchDirInfo};
+pub use intel::SecuritySettings;
 
 pub fn run() {
     tauri::Builder::default()
@@ -51,6 +53,14 @@ pub fn run() {
             ops::quarantine_list,
             ops::plan_action,
             ops::execute_action,
+            intel::removal_impact,
+            intel::snapshots_list,
+            intel::snapshot_create,
+            intel::snapshot_compare,
+            intel::snapshot_reconstruction,
+            intel::security_settings,
+            intel::set_osv_enabled,
+            intel::labs_list,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AGASTHY");

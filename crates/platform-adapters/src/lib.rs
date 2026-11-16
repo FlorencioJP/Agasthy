@@ -109,6 +109,9 @@ pub const DEFAULT_COMMAND_ALLOWLIST: &[&str] = &[
     "lsof",
     // Docker usage and the two prune operations in agasthy-cleanup::docker
     "docker",
+    // OSV.dev advisory lookups, only when the user enables network checks;
+    // fixed HTTPS URL and arguments in agasthy-security.
+    "curl",
 ];
 
 /// Build the command runner used in production for this platform.

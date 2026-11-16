@@ -1,4 +1,10 @@
 import type {
+  Lab,
+  ReconstructionPlan,
+  RemovalImpact,
+  SecuritySettings,
+  SnapshotDiff,
+  SnapshotSummary,
   ActionPlan,
   ActionRequest,
   ActionResult,
@@ -80,6 +86,15 @@ export const api = {
   /** Dry run: returns what would happen and a single-use confirmation token. */
   planAction: (request: ActionRequest) => invoke<ActionPlan>("plan_action", { request }),
   executeAction: (token: string) => invoke<ActionResult>("execute_action", { token }),
+  removalImpact: (id: string) => invoke<RemovalImpact | null>("removal_impact", { id }),
+  snapshotsList: () => invoke<SnapshotSummary[]>("snapshots_list"),
+  snapshotCreate: (name: string) => invoke<SnapshotSummary>("snapshot_create", { name }),
+  /** `to: null` compares with the machine as it is now. */
+  snapshotCompare: (from: string, to: string | null) => invoke<SnapshotDiff>("snapshot_compare", { from, to }),
+  snapshotReconstruction: (id: string) => invoke<ReconstructionPlan>("snapshot_reconstruction", { id }),
+  securitySettings: () => invoke<SecuritySettings>("security_settings"),
+  setOsvEnabled: (enabled: boolean) => invoke<void>("set_osv_enabled", { enabled }),
+  labsList: () => invoke<Lab[]>("labs_list"),
 };
 
 export async function onScanEvent(handler: (e: ScanEvent) => void): Promise<() => void> {

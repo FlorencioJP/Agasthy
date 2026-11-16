@@ -7,7 +7,9 @@ use agasthy_cleanup::{DiskAnalysis, Quarantine};
 use agasthy_core::{Availability, ScanKind, Store};
 use agasthy_platform::{GpuInfo, Platform, SystemCommandRunner};
 use agasthy_process::ProcessMonitor;
+use agasthy_snapshots::SnapshotStore;
 use agasthy_system_monitor::Monitor;
+use agasthy_update_lab::LabStore;
 
 pub struct Inner {
     pub data_dir: PathBuf,
@@ -23,6 +25,8 @@ pub struct Inner {
     pub engine: ActionEngine,
     /// The latest disk analysis; cleanup plans may only target its candidates.
     pub analysis: Mutex<Option<DiskAnalysis>>,
+    pub snapshots: SnapshotStore,
+    pub labs: LabStore,
 }
 
 #[derive(Clone)]
@@ -41,6 +45,8 @@ impl AppState {
             platform.as_ref(),
             &agasthy_discovery::catalog::tool_ids(),
         );
+        let data_dir_snap = data_dir.join("snapshots");
+        let data_dir_labs = data_dir.join("labs");
         let quarantine = Quarantine::new(data_dir.join("quarantine"))
             .map_err(|e| format!("could not create the quarantine folder: {e}"))?;
         Ok(Self(Arc::new(Inner {
@@ -56,6 +62,10 @@ impl AppState {
             quarantine,
             engine: ActionEngine::new(),
             analysis: Mutex::new(None),
+            snapshots: SnapshotStore::new(data_dir_snap)
+                .map_err(|e| format!("could not create the snapshots folder: {e}"))?,
+            labs: LabStore::new(data_dir_labs)
+                .map_err(|e| format!("could not create the Update Lab folder: {e}"))?,
         })))
     }
 }

@@ -27,11 +27,14 @@ pub struct PackageRecord {
     pub attrs: PackageAttrs,
     /// Entity id override (Homebrew casks use a separate namespace).
     pub id: String,
+    /// Names of packages from the same manager this one needs at runtime.
+    pub depends_on: Vec<String>,
 }
 
 impl PackageRecord {
     fn new(manager: PackageManagerId, kind: &str, name: &str, version: Option<String>) -> Self {
         Self {
+            depends_on: Vec::new(),
             id: format!("package:{}:{}", manager.as_str(), name),
             name: name.into(),
             version,
@@ -151,6 +154,29 @@ pub fn parse_brew(stdout: &str) -> Result<Vec<PackageRecord>, String> {
             .homepage
             .as_deref()
             .and_then(parse_github_homepage);
+        // What the *installed* keg links to (it can differ from the current
+        // formula definition, e.g. built against openssl@3 while the formula now
+        // names openssl@4). Fall back to the formula's list when absent.
+        let runtime: Option<Vec<String>> = latest_installed
+            .and_then(|i| i.get("runtime_dependencies"))
+            .and_then(|r| r.as_array())
+            .map(|a| {
+                a.iter()
+                    .filter(|d| d.get("declared_directly").and_then(|x| x.as_bool()) != Some(false))
+                    .filter_map(|d| d.get("full_name").and_then(|n| n.as_str()))
+                    .map(|n| n.rsplit('/').next().unwrap_or(n).to_string())
+                    .collect()
+            });
+        rec.depends_on = runtime.unwrap_or_else(|| {
+            f.get("dependencies")
+                .and_then(|d| d.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|x| x.as_str().map(str::to_string))
+                        .collect()
+                })
+                .unwrap_or_default()
+        });
         out.push(rec);
     }
     for c in v
@@ -506,6 +532,25 @@ fn push_package(
             Confidence::Verified,
         )],
     });
+    for dep in &rec.depends_on {
+        batch.relationships.push(RelationshipInput {
+            from_id: rec.id.clone(),
+            to_id: format!("package:{}:{dep}", manager.as_str()),
+            kind: RelationKind::DependsOn,
+            confidence: Confidence::Verified,
+            attributes: serde_json::Value::Null,
+            evidence: vec![EvidenceInput::new(
+                "package_dependency",
+                format!(
+                    "{} lists `{dep}` as a dependency of `{}`",
+                    manager.display_name(),
+                    rec.name
+                ),
+                cmd.display(),
+                Confidence::Verified,
+            )],
+        });
+    }
     if let Some(up) = &rec.attrs.upstream {
         let rid = up.entity_id();
         if !batch.entities.iter().any(|e| e.id == rid) {
@@ -581,7 +626,7 @@ mod tests {
     use agasthy_platform::{CommandOutput, MockCommandRunner};
 
     // Recorded-shape samples (trimmed). Development fixtures only.
-    const BREW: &str = r#"{"formulae":[{"name":"jq","full_name":"jq","desc":"Lightweight and flexible command-line JSON processor","license":"MIT","homepage":"https://jqlang.github.io/jq/","versions":{"stable":"1.7.1"},"installed":[{"version":"1.7.1","installed_on_request":true}]},{"name":"ripgrep","desc":"Search tool","license":"Unlicense","homepage":"https://github.com/BurntSushi/ripgrep","versions":{"stable":"14.1.1"},"installed":[{"version":"14.1.1","installed_on_request":false}]}],"casks":[{"token":"visual-studio-code","name":["Microsoft Visual Studio Code"],"desc":"Open-source code editor","homepage":"https://code.visualstudio.com/","version":"1.96.0","installed":"1.95.3","artifacts":[{"app":["Visual Studio Code.app"]},{"binary":["code"]}]}]}"#;
+    const BREW: &str = r#"{"formulae":[{"name":"jq","full_name":"jq","dependencies":["oniguruma"],"desc":"Lightweight and flexible command-line JSON processor","license":"MIT","homepage":"https://jqlang.github.io/jq/","versions":{"stable":"1.7.1"},"installed":[{"version":"1.7.1","installed_on_request":true}]},{"name":"ripgrep","desc":"Search tool","license":"Unlicense","homepage":"https://github.com/BurntSushi/ripgrep","versions":{"stable":"14.1.1"},"dependencies":["pcre2@11"],"installed":[{"version":"14.1.1","installed_on_request":false,"runtime_dependencies":[{"full_name":"pcre2","version":"10.44","declared_directly":true},{"full_name":"indirect-lib","declared_directly":false}]}]}],"casks":[{"token":"visual-studio-code","name":["Microsoft Visual Studio Code"],"desc":"Open-source code editor","homepage":"https://code.visualstudio.com/","version":"1.96.0","installed":"1.95.3","artifacts":[{"app":["Visual Studio Code.app"]},{"binary":["code"]}]}]}"#;
 
     #[test]
     fn brew_parsing() {
@@ -594,6 +639,16 @@ mod tests {
         assert!(
             jq.attrs.upstream.is_none(),
             "github.io homepage is not a repo"
+        );
+        assert_eq!(
+            jq.depends_on,
+            vec!["oniguruma"],
+            "no runtime_dependencies: formula list"
+        );
+        assert_eq!(
+            r[1].depends_on,
+            vec!["pcre2"],
+            "installed keg's direct runtime deps win"
         );
         let rg = &r[1];
         assert_eq!(

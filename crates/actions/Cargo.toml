@@ -12,6 +12,7 @@ agasthy-core.workspace = true
 agasthy-platform.workspace = true
 agasthy-process.workspace = true
 agasthy-cleanup.workspace = true
+agasthy-update-lab.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 ts-rs.workspace = true

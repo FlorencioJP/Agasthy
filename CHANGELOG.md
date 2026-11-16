@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added (Phase 5)
+- Impact Analysis: removal simulation for any entity, Homebrew dependents from installed runtime dependencies, runtime and project impact.
+- Safe Update Lab: Git worktree labs with approved install/test steps and guarded apply.
+- Snapshots: capture, compare, reconstruction plans.
+- Security: outdated Homebrew packages, unknown-origin tools, opt-in OSV.dev advisories.
+- CLI: `agasthy impact <id>` now covers any entity; `agasthy security` (local checks).
+
 ### Added (Phase 4)
 - Typed action engine (`agasthy-actions`) with dry-run plans, single-use confirmations, re-validation, verification and audit.
 - Processes screen: live process table with ports, project links and protection reasons; stop and force quit with review.

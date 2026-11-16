@@ -49,6 +49,7 @@ export const KIND_LABEL: Record<EntityKind, { short: string; provenance: string 
   local_model: { short: "Model", provenance: "Model stored on disk for local inference" },
   mcp_server: { short: "MCP", provenance: "MCP server declared in a configuration file" },
   ai_config_file: { short: "AI file", provenance: "AI instruction or configuration file" },
+  finding: { short: "Finding", provenance: "Security or lifecycle finding" },
 };
 
 /** Kinds shown on the AI Ecosystem page rather than in Discovery. */
@@ -454,6 +455,11 @@ export function DiscoveryPage() {
                 onClick={() => void nav({ to: "/graph", search: { view: "focus", focus: selected, depth: 1, sel: selected } })}
               >
                 <Network aria-hidden /> Open in graph
+              </Button>
+            }
+            extraActions={
+              <Button size="sm" variant="ghost" onClick={() => void nav({ to: "/impact", search: { tab: "impact", id: selected } })}>
+                What if removed?
               </Button>
             }
             extra={(entity) =>

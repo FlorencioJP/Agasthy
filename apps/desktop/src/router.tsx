@@ -4,7 +4,10 @@ import { DiscoveryPage, type DiscoveryTab, TABS } from "./pages/discovery";
 import { AI_TABS, AiPage, type AiSearch, type AiTab } from "./pages/ai";
 import { GraphPage, type GraphMode, type GraphSearch } from "./pages/graph";
 import { OverviewPage } from "./pages/overview";
+import { ImpactPage, type ImpactSearch } from "./pages/impact";
 import { ProcessesPage } from "./pages/processes";
+import { SecurityPage } from "./pages/security";
+import { SnapshotsPage } from "./pages/snapshots";
 import { StoragePage } from "./pages/storage";
 import { PrivacyPage } from "./pages/privacy";
 import { SettingsPage } from "./pages/settings";
@@ -68,10 +71,22 @@ const aiRoute = createRoute({
 const processesRoute = createRoute({ getParentRoute: () => rootRoute, path: "/processes", component: ProcessesPage });
 const storageRoute = createRoute({ getParentRoute: () => rootRoute, path: "/storage", component: StoragePage });
 
+const impactRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/impact",
+  validateSearch: (s: Record<string, unknown>): ImpactSearch => ({
+    tab: s.tab === "lab" ? "lab" : "impact",
+    id: typeof s.id === "string" && s.id ? s.id : undefined,
+  }),
+  component: ImpactPage,
+});
+const snapshotsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/snapshots", component: SnapshotsPage });
+const securityRoute = createRoute({ getParentRoute: () => rootRoute, path: "/security", component: SecurityPage });
+
 const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/settings", component: SettingsPage });
 const privacyRoute = createRoute({ getParentRoute: () => rootRoute, path: "/privacy", component: PrivacyPage });
 
-const routeTree = rootRoute.addChildren([overviewRoute, discoveryRoute, graphRoute, aiRoute, processesRoute, storageRoute, settingsRoute, privacyRoute]);
+const routeTree = rootRoute.addChildren([overviewRoute, discoveryRoute, graphRoute, aiRoute, processesRoute, storageRoute, securityRoute, impactRoute, snapshotsRoute, settingsRoute, privacyRoute]);
 
 // Hash history: the packaged app serves static files, so deep links must not hit the server.
 export const router = createRouter({ routeTree, history: createHashHistory() });

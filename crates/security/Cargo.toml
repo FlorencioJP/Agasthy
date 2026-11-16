@@ -1,0 +1,21 @@
+[package]
+name = "agasthy-security"
+description = "Security and lifecycle findings for AGASTHY: OSV advisories (opt-in) and outdated software"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+agasthy-core.workspace = true
+agasthy-platform.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

@@ -16,6 +16,7 @@ import { Badge, Button, ConfidenceBadge, StateView } from "@agasthy/ui";
 import { Copy, FolderOpen, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { AiAttributes } from "../components/ai-attributes";
+import { FindingAttributes } from "../components/finding-attributes";
 import { Avail } from "../components/availability";
 import { Kv } from "../components/page";
 import { formatBytes, formatDateTime, formatRelative, shortenHome } from "../lib/format";
@@ -42,6 +43,7 @@ const REL_LABEL: Record<RelationKind, { out: string; in: string }> = {
   same_content: { out: "Identical to", in: "Identical to" },
   potential_conflict: { out: "May conflict with", in: "May conflict with" },
   references: { out: "Imports", in: "Imported by" },
+  has_finding: { out: "Has finding", in: "Affects" },
 };
 
 export function EntityDetailPanel({
@@ -49,6 +51,7 @@ export function EntityDetailPanel({
   onClose,
   onNavigate,
   actions,
+  extraActions,
   extra,
 }: {
   id: string;
@@ -56,6 +59,7 @@ export function EntityDetailPanel({
   onNavigate: (id: string, kind: EntityKind) => void;
   /** Extra buttons shown under the header. */
   actions?: ReactNode;
+  extraActions?: ReactNode;
   /** Extra sections rendered for the loaded entity (e.g. impact analysis). */
   extra?: (entity: Entity) => ReactNode;
 }) {
@@ -77,7 +81,12 @@ export function EntityDetailPanel({
       ) : (
         <div className="flex flex-col gap-5 p-4">
           <Header entity={detail.data.entity} />
-          {actions ? <div className="-mt-3 flex gap-1.5">{actions}</div> : null}
+          {actions || extraActions ? (
+            <div className="-mt-3 flex gap-1.5">
+              {actions}
+              {extraActions}
+            </div>
+          ) : null}
           {extra?.(detail.data.entity)}
           <Attributes entity={detail.data.entity} />
           <Relationships outgoing={detail.data.outgoing} incoming={detail.data.incoming} onNavigate={onNavigate} />
@@ -161,6 +170,8 @@ function Attributes({ entity }: { entity: Entity }) {
     case "mcp_server":
     case "ai_config_file":
       return <AiAttributes entity={entity} />;
+    case "finding":
+      return <FindingAttributes entity={entity} />;
     case "repository": {
       const r = a as unknown as RepositoryAttrs;
       return (

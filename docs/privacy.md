@@ -4,7 +4,9 @@ This describes AGASTHY v0.1.0. The in-app **Privacy** page shows the live values
 
 ## Transmits
 
-- **Nothing to the internet.** AGASTHY makes no internet requests: no account, telemetry, analytics, crash reporting or update checks. Cloud AI providers are never contacted.
+- **Nothing to the internet by default.** AGASTHY makes no internet requests of its own: no account, telemetry, analytics, crash reporting or update checks. Cloud AI providers are never contacted.
+- **Optional: OSV.dev advisory checks (off by default).** If you turn this on (Security page), each security check sends package *name, ecosystem and version* triples to `https://api.osv.dev` with `curl`, and fetches advisory details by ID. No paths, project names, hostnames or credentials are sent. The Security page shows exactly what would be sent before you enable it, and each check is written to the audit log with the number of versions sent.
+- **Update Lab steps you approve** run `npm`, `pnpm` or `cargo` in the lab copy; installs download packages from those registries, and test runs execute the project's own test command.
 - **Local ports, for local AI engines only.** When an installed local inference engine is found (Ollama 11434, LM Studio 1234, Jan 1337, vLLM 8000, LocalAI 8080), the AI scan opens and closes a TCP connection to that port on `127.0.0.1` to see if it is running. No data is sent.
 - Package managers that AGASTHY runs to list installed packages may refresh their *own* metadata caches according to their own settings. AGASTHY sets opt-outs where they exist (`HOMEBREW_NO_AUTO_UPDATE`, `HOMEBREW_NO_ANALYTICS`, `NO_UPDATE_NOTIFIER`, `COREPACK_ENABLE_NETWORK=0`, `DOTNET_CLI_TELEMETRY_OPTOUT`, `CHECKPOINT_DISABLE`, …).
 
@@ -34,10 +36,12 @@ It contains scan results with their evidence, your folder list, scan history and
 
 Only allowlisted programs, with fixed arguments, never through a shell: `git`, `brew`, `npm`, `pnpm`, `uv`, `python3` (for `pip list`), `cargo`, `system_profiler`, and the catalogued developer tools, which are run only with their version argument. Shells and privilege-escalation tools are always refused. AGASTHY never uses `sudo`.
 
-Also `lsof` (to list listening TCP ports) and `docker` (`system df`, `images --filter dangling=true --quiet`, and, only after you confirm, `builder prune --force` or `image prune --force`).
+Also `curl` (OSV.dev only, when enabled; fixed HTTPS URL), `lsof` (to list listening TCP ports) and `docker` (`system df`, `images --filter dangling=true --quiet`, and, only after you confirm, `builder prune --force` or `image prune --force`).
 
 ## Changes
 
 Changes happen only when you confirm a reviewed plan. In this build that means: stopping or force-quitting a process you own; moving cleanup candidates into AGASTHY's quarantine; restoring or permanently deleting quarantined items; and pruning Docker build cache or dangling images. Each one is planned as a dry run first (exact targets, sizes, risks, recovery), re-validated just before it runs, verified afterwards and written to the audit log. AGASTHY never uses `sudo`, never deletes Git repositories or files tracked by Git, never removes Docker volumes, and never stops system processes or other users' processes.
+
+Snapshots are JSON files in `~/Library/Application Support/org.agasthy.desktop/snapshots/` containing application, tool, package and repository metadata and environment variable *names* (never values). Update Labs live in `…/labs/` as Git worktrees of your projects.
 
 Quarantine lives in `~/Library/Application Support/org.agasthy.desktop/quarantine/`. Items are moved there with a rename on the same disk (never copied), so disk space is freed only when you choose **Delete permanently**.

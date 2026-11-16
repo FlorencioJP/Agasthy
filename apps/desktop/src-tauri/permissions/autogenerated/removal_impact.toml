@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-removal-impact"
+description = "Enables the removal_impact command without any pre-configured scope."
+commands.allow = ["removal_impact"]
+
+[[permission]]
+identifier = "deny-removal-impact"
+description = "Denies the removal_impact command without any pre-configured scope."
+commands.deny = ["removal_impact"]

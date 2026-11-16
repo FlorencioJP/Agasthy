@@ -16,6 +16,7 @@ dependencies = [
  "agasthy-core",
  "agasthy-platform",
  "agasthy-process",
+ "agasthy-update-lab",
  "serde",
  "serde_json",
  "tempfile",
@@ -45,6 +46,7 @@ dependencies = [
  "agasthy-graph",
  "agasthy-platform",
  "agasthy-process",
+ "agasthy-security",
  "agasthy-system-monitor",
  "serde_json",
 ]
@@ -72,9 +74,13 @@ dependencies = [
  "agasthy-graph",
  "agasthy-platform",
  "agasthy-process",
+ "agasthy-security",
+ "agasthy-snapshots",
  "agasthy-system-monitor",
+ "agasthy-update-lab",
  "serde",
  "serde_json",
+ "sysinfo",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
@@ -146,12 +152,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "agasthy-security"
+version = "0.1.0"
+dependencies = [
+ "agasthy-core",
+ "agasthy-platform",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "ts-rs",
+]
+
+[[package]]
+name = "agasthy-snapshots"
+version = "0.1.0"
+dependencies = [
+ "agasthy-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "ts-rs",
+]
+
+[[package]]
 name = "agasthy-system-monitor"
 version = "0.1.0"
 dependencies = [
  "agasthy-core",
  "serde",
  "sysinfo",
+ "ts-rs",
+]
+
+[[package]]
+name = "agasthy-update-lab"
+version = "0.1.0"
+dependencies = [
+ "agasthy-core",
+ "agasthy-platform",
+ "serde",
+ "serde_json",
+ "tempfile",
  "ts-rs",
 ]
 

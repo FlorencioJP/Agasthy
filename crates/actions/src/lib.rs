@@ -19,6 +19,9 @@ use agasthy_cleanup::{CleanupCandidate, DiskAnalysis, Quarantine, QuarantineStat
 use agasthy_core::Availability;
 use agasthy_platform::CommandRunner;
 use agasthy_process::ProcessMonitor;
+use agasthy_update_lab::{
+    LabEcosystem, LabSpec, LabState, LabStep, LabStore, preview as lab_preview,
+};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -40,6 +43,23 @@ pub enum ActionRequest {
     PurgeQuarantine { op_id: String },
     /// Prune Docker build cache or dangling images. Never volumes.
     DockerPrune { target: DockerPrune },
+    /// Create an Update Lab: a detached worktree with one dependency changed.
+    CreateUpdateLab {
+        repo_id: String,
+        ecosystem: LabEcosystem,
+        package: String,
+        target_version: String,
+    },
+    /// Install or test inside a lab's worktree.
+    RunLabStep {
+        lab_id: String,
+        step: LabStep,
+        allow_scripts: bool,
+    },
+    /// Copy the lab's manifest and lockfile into the project.
+    ApplyLab { lab_id: String },
+    /// Remove a lab's worktree.
+    DiscardLab { lab_id: String },
 }
 
 impl ActionRequest {
@@ -51,6 +71,17 @@ impl ActionRequest {
             ActionRequest::RestoreQuarantine { .. } => "cleanup.restore",
             ActionRequest::PurgeQuarantine { .. } => "cleanup.purge",
             ActionRequest::DockerPrune { .. } => "docker.prune",
+            ActionRequest::CreateUpdateLab { .. } => "lab.create",
+            ActionRequest::RunLabStep {
+                step: LabStep::Install,
+                ..
+            } => "lab.install",
+            ActionRequest::RunLabStep {
+                step: LabStep::Test,
+                ..
+            } => "lab.test",
+            ActionRequest::ApplyLab { .. } => "lab.apply",
+            ActionRequest::DiscardLab { .. } => "lab.discard",
         }
     }
 }
@@ -115,6 +146,10 @@ pub struct ActionContext<'a> {
     pub scan_roots: Vec<PathBuf>,
     pub repos: Vec<PathBuf>,
     pub analysis: Option<DiskAnalysis>,
+    /// Update Lab storage, when available.
+    pub labs: Option<&'a LabStore>,
+    /// Known repositories: (entity id, path).
+    pub repo_index: Vec<(String, PathBuf)>,
 }
 
 /// Receives one audit record per execution: (action, target, outcome, detail).
@@ -365,6 +400,10 @@ impl ActionEngine {
                 }
                 .with_block(blocked)
             }
+            ActionRequest::CreateUpdateLab { .. }
+            | ActionRequest::RunLabStep { .. }
+            | ActionRequest::ApplyLab { .. }
+            | ActionRequest::DiscardLab { .. } => plan_lab(ctx, &request),
         };
         if plan.can_execute {
             let t = token();
@@ -543,6 +582,10 @@ impl ActionEngine {
                 },
                 Err(e) => failed("Docker prune", &e),
             },
+            ActionRequest::CreateUpdateLab { .. }
+            | ActionRequest::RunLabStep { .. }
+            | ActionRequest::ApplyLab { .. }
+            | ActionRequest::DiscardLab { .. } => execute_lab(ctx, &request),
         };
         let target = match &request {
             ActionRequest::TerminateProcess { pid, .. } => format!("pid {pid}"),
@@ -550,6 +593,17 @@ impl ActionEngine {
             ActionRequest::RestoreQuarantine { op_id }
             | ActionRequest::PurgeQuarantine { op_id } => op_id.clone(),
             ActionRequest::DockerPrune { target } => format!("{target:?}"),
+            ActionRequest::CreateUpdateLab {
+                repo_id,
+                package,
+                target_version,
+                ..
+            } => {
+                format!("{repo_id}: {package} → {target_version}")
+            }
+            ActionRequest::RunLabStep { lab_id, .. }
+            | ActionRequest::ApplyLab { lab_id }
+            | ActionRequest::DiscardLab { lab_id } => lab_id.clone(),
         };
         let outcome = match result.outcome {
             ActionOutcome::Succeeded => "ok",
@@ -584,6 +638,307 @@ impl WithBlock for ActionPlan {
             });
         }
         self
+    }
+}
+
+fn base_plan(request: &ActionRequest, title: String, summary: String) -> ActionPlan {
+    ActionPlan {
+        token: None,
+        request: request.clone(),
+        title,
+        summary,
+        items: vec![],
+        total_bytes: None,
+        warnings: vec![],
+        can_execute: true,
+        reversible: true,
+        recovery: String::new(),
+        expires_in_secs: PLAN_TTL.as_secs() as u32,
+    }
+}
+
+fn blocked_plan(request: &ActionRequest, title: &str, why: String) -> ActionPlan {
+    let mut p = base_plan(request, title.into(), why.clone());
+    p.can_execute = false;
+    p.items.push(PlanItem {
+        label: title.into(),
+        detail: None,
+        bytes: None,
+        blocked: Some(why),
+    });
+    p
+}
+
+fn plan_lab(ctx: &ActionContext<'_>, request: &ActionRequest) -> ActionPlan {
+    let Some(labs) = ctx.labs else {
+        return blocked_plan(
+            request,
+            "Update Lab",
+            "the Update Lab is not available".into(),
+        );
+    };
+    match request {
+        ActionRequest::CreateUpdateLab {
+            repo_id,
+            ecosystem,
+            package,
+            target_version,
+        } => {
+            let Some((_, path)) = ctx.repo_index.iter().find(|(id, _)| id == repo_id) else {
+                return blocked_plan(
+                    request,
+                    "Create Update Lab",
+                    "unknown repository; scan your folders again".into(),
+                );
+            };
+            let spec = LabSpec {
+                repo_id: repo_id.clone(),
+                repo_path: path.display().to_string(),
+                ecosystem: *ecosystem,
+                package: package.clone(),
+                target_version: target_version.clone(),
+            };
+            match lab_preview(ctx.runner, &spec) {
+                Ok(p) => {
+                    let mut plan = base_plan(
+                        request,
+                        format!("Try {package} {} in an Update Lab", p.new_constraint),
+                        "A separate copy of the project at its current commit is created in AGASTHY's data folder (a Git worktree). The change is written only there. Your project's files are not modified.".into(),
+                    );
+                    plan.items.push(PlanItem {
+                        label: format!(
+                            "{}: {package} {} → {}",
+                            p.manifest, p.old_constraint, p.new_constraint
+                        ),
+                        detail: Some(format!("from commit {}", &p.head[..p.head.len().min(12)])),
+                        bytes: None,
+                        blocked: None,
+                    });
+                    if !p.dirty_files.is_empty() {
+                        plan.warnings.push(format!(
+                            "{} uncommitted file(s) in the project are not part of the lab (it starts from the last commit): {}",
+                            p.dirty_files.len(),
+                            p.dirty_files.iter().take(5).cloned().collect::<Vec<_>>().join(", ")
+                        ));
+                    }
+                    plan.warnings.push("Git records the worktree in the project's .git folder until the lab is discarded.".into());
+                    plan.recovery =
+                        "Discard the lab to remove the worktree; nothing in the project changes."
+                            .into();
+                    plan
+                }
+                Err(e) => blocked_plan(request, "Create Update Lab", e),
+            }
+        }
+        ActionRequest::RunLabStep {
+            lab_id,
+            step,
+            allow_scripts,
+        } => match labs.load(lab_id) {
+            Ok(lab) if lab.state == LabState::Ready => {
+                let cmd = LabStore::step_command(&lab, *step, *allow_scripts);
+                let mut plan = base_plan(
+                    request,
+                    match step {
+                        LabStep::Install => "Install dependencies in the lab".into(),
+                        LabStep::Test => "Run the tests in the lab".into(),
+                    },
+                    format!(
+                        "Runs `{}` inside the lab copy at {}.",
+                        cmd.display(),
+                        lab.worktree
+                    ),
+                );
+                plan.items.push(PlanItem {
+                    label: cmd.display(),
+                    detail: Some(lab.worktree.clone()),
+                    bytes: None,
+                    blocked: None,
+                });
+                match step {
+                    LabStep::Install => {
+                        plan.warnings.push("Downloads packages from the package registry (network).".into());
+                        if *allow_scripts {
+                            plan.warnings.push("Package install scripts are ALLOWED: code from the downloaded packages will run on this machine.".into());
+                        } else if lab.spec.ecosystem != LabEcosystem::Cargo {
+                            plan.warnings.push("Package install scripts are disabled (--ignore-scripts). Some packages may need them to work.".into());
+                        }
+                    }
+                    LabStep::Test => plan.warnings.push("Runs the project's own test command. It executes project code and dependencies on this machine (in the lab copy, as your user).".into()),
+                }
+                plan.reversible = false;
+                plan.recovery =
+                    "Effects stay inside the lab copy; discard the lab to remove it.".into();
+                plan
+            }
+            Ok(_) => blocked_plan(request, "Update Lab", "this lab is no longer active".into()),
+            Err(e) => blocked_plan(request, "Update Lab", e),
+        },
+        ActionRequest::ApplyLab { lab_id } => match labs.load(lab_id) {
+            Ok(lab) => {
+                let blockers = labs.apply_blockers(ctx.runner, &lab);
+                let mut plan = base_plan(
+                    request,
+                    format!("Apply {} {} to {}", lab.spec.package, lab.new_constraint, lab.spec.repo_path),
+                    "Copies the manifest and lockfile from the lab into your project. Nothing else in the project is changed.".into(),
+                );
+                for f in [lab.spec.ecosystem.manifest(), lab.spec.ecosystem.lockfile()] {
+                    plan.items.push(PlanItem {
+                        label: format!("{}/{f}", lab.spec.repo_path),
+                        detail: Some("overwritten from the lab".into()),
+                        bytes: None,
+                        blocked: None,
+                    });
+                }
+                if !blockers.is_empty() {
+                    plan.can_execute = false;
+                    plan.items.push(PlanItem {
+                        label: "Cannot apply".into(),
+                        detail: None,
+                        bytes: None,
+                        blocked: Some(blockers.join("; ")),
+                    });
+                }
+                plan.warnings.push("Run your own install afterwards so node_modules / target match the new lockfile.".into());
+                plan.recovery = format!(
+                    "Both files are tracked by Git: `git checkout -- {} {}` in the project undoes this.",
+                    lab.spec.ecosystem.manifest(),
+                    lab.spec.ecosystem.lockfile()
+                );
+                plan
+            }
+            Err(e) => blocked_plan(request, "Apply lab", e),
+        },
+        ActionRequest::DiscardLab { lab_id } => match labs.load(lab_id) {
+            Ok(lab) if lab.state != LabState::Discarded => {
+                let mut plan = base_plan(
+                    request,
+                    "Discard Update Lab".into(),
+                    "Removes the lab copy (`git worktree remove`). The project is not touched."
+                        .into(),
+                );
+                plan.items.push(PlanItem {
+                    label: lab.worktree.clone(),
+                    detail: Some("lab worktree".into()),
+                    bytes: None,
+                    blocked: None,
+                });
+                plan.reversible = false;
+                plan.recovery = "Create a new lab to try again.".into();
+                plan
+            }
+            Ok(_) => blocked_plan(request, "Discard lab", "already discarded".into()),
+            Err(e) => blocked_plan(request, "Discard lab", e),
+        },
+        _ => blocked_plan(request, "Update Lab", "not a lab action".into()),
+    }
+}
+
+fn execute_lab(ctx: &ActionContext<'_>, request: &ActionRequest) -> ActionResult {
+    let Some(labs) = ctx.labs else {
+        return failed("Update Lab", "the Update Lab is not available");
+    };
+    let ok =
+        |title: String, message: String, details: Vec<String>, verification: &str| ActionResult {
+            title,
+            outcome: ActionOutcome::Succeeded,
+            message,
+            details,
+            verification: verification.into(),
+            recovery: None,
+            bytes: None,
+            quarantine_op: None,
+        };
+    match request {
+        ActionRequest::CreateUpdateLab {
+            repo_id,
+            ecosystem,
+            package,
+            target_version,
+        } => {
+            let Some((_, path)) = ctx.repo_index.iter().find(|(id, _)| id == repo_id) else {
+                return failed("Create Update Lab", "unknown repository");
+            };
+            let spec = LabSpec {
+                repo_id: repo_id.clone(),
+                repo_path: path.display().to_string(),
+                ecosystem: *ecosystem,
+                package: package.clone(),
+                target_version: target_version.clone(),
+            };
+            match labs.create(ctx.runner, spec) {
+                Ok(lab) => ok(
+                    format!("Lab created for {package} {}", lab.new_constraint),
+                    format!(
+                        "Next: install dependencies in the lab, then run the tests. Lab: {}",
+                        lab.id
+                    ),
+                    vec![format!("worktree: {}", lab.worktree)],
+                    "The worktree exists and its manifest contains the new version; the project's manifest was not changed.",
+                ),
+                Err(e) => failed("Create Update Lab", &e),
+            }
+        }
+        ActionRequest::RunLabStep {
+            lab_id,
+            step,
+            allow_scripts,
+        } => match labs.run_step(ctx.runner, lab_id, *step, *allow_scripts) {
+            Ok(lab) => {
+                let rec = lab.steps.last().cloned();
+                let Some(rec) = rec else {
+                    return failed("Update Lab", "no result recorded");
+                };
+                let tail: Vec<String> = rec
+                    .output_tail
+                    .lines()
+                    .rev()
+                    .take(12)
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .rev()
+                    .map(str::to_string)
+                    .collect();
+                ActionResult {
+                    title: format!("{} {}", match step { LabStep::Install => "Install", LabStep::Test => "Tests" }, if rec.ok { "passed" } else { "failed" }),
+                    outcome: if rec.ok { ActionOutcome::Succeeded } else { ActionOutcome::Failed },
+                    message: format!("`{}` exited with {:?} in {:.1} s.", rec.command, rec.exit_code, rec.duration_ms as f64 / 1000.0),
+                    details: tail,
+                    verification: "Exit status reported by the command; the full output tail is kept in the lab record.".into(),
+                    recovery: None,
+                    bytes: None,
+                    quarantine_op: None,
+                }
+            }
+            Err(e) => failed("Update Lab", &e),
+        },
+        ActionRequest::ApplyLab { lab_id } => match labs.apply(ctx.runner, lab_id) {
+            Ok((lab, copied)) => {
+                let mut r = ok(
+                    format!("Applied {} {}", lab.spec.package, lab.new_constraint),
+                    "The project's manifest and lockfile now match the lab. Run your install to update dependencies.".into(),
+                    copied,
+                    "Each written file was read back and compared byte for byte.",
+                );
+                r.recovery = Some(format!(
+                    "`git checkout -- {} {}` in the project.",
+                    lab.spec.ecosystem.manifest(),
+                    lab.spec.ecosystem.lockfile()
+                ));
+                r
+            }
+            Err(e) => failed("Apply lab", &e),
+        },
+        ActionRequest::DiscardLab { lab_id } => match labs.discard(ctx.runner, lab_id) {
+            Ok(lab) => ok(
+                "Lab discarded".into(),
+                "The lab copy was removed.".into(),
+                vec![lab.worktree],
+                "The worktree folder no longer exists.",
+            ),
+            Err(e) => failed("Discard lab", &e),
+        },
+        _ => failed("Update Lab", "not a lab action"),
     }
 }
 

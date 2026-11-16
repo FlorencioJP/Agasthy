@@ -124,6 +124,11 @@ fn context(inner: &Inner) -> CmdResult<ActionContext<'_>> {
             .into_iter()
             .map(|(_, _, p, _)| p)
             .collect(),
+        labs: Some(&inner.labs),
+        repo_index: repositories(inner)?
+            .into_iter()
+            .map(|(id, _, p, _)| (id, p))
+            .collect(),
         analysis: inner
             .analysis
             .lock()

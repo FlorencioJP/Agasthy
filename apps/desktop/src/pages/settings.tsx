@@ -129,6 +129,7 @@ const SCAN_DESCRIPTIONS: Record<ScanKind, string> = {
   repositories: "Git repositories inside your project folders: branch, commit, working-tree status, remotes, languages, size.",
   software: "Application bundles and a catalogue of developer tools on PATH, with versions from `--version`.",
   packages: "Read-only inventories from Homebrew, npm, pnpm, uv, pip and cargo. Homebrew can take a minute.",
+  security: "Outdated Homebrew packages (local data), tools of unknown origin, and, only if you enable it on the Security page, OSV.dev advisories.",
   ai: "AI assistants, providers, MCP servers, local models and AI instruction files in fixed home locations and your scanned repositories. Credential files are checked for existence only.",
 };
 
@@ -137,7 +138,7 @@ function ScansPanel() {
   return (
     <Panel title="Scans">
       <ul className="divide-y divide-line">
-        {(["repositories", "software", "packages", "ai"] as ScanKind[]).map((k) => {
+        {(["repositories", "software", "packages", "ai", "security"] as ScanKind[]).map((k) => {
           const running = activity.running.has(k);
           return (
             <li key={k} className="flex items-center justify-between gap-4 py-2 first:pt-0 last:pb-0">

@@ -8,7 +8,10 @@
 //! * runtime impact analysis ([`runtime_impact`]): what changes for each
 //!   project if a runtime copy is removed, with evidence and explicit unknowns.
 
+pub mod removal;
 pub mod version_req;
+
+pub use removal::{RemovalImpact, RiskLevel, removal_impact};
 
 use std::collections::{BTreeSet, HashMap, VecDeque};
 

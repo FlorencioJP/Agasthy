@@ -348,6 +348,7 @@ fn execute_scan(app: &AppHandle, inner: &Inner, kind: ScanKind) -> CmdResult<Sca
             let opts = AiScanOptions::new(home, projects);
             scan_ai(inner.platform.as_ref(), &opts, &emit)
         }
+        ScanKind::Security => crate::intel::security_batch(inner)?,
     };
 
     with_store(inner, |s| {

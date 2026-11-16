@@ -21,7 +21,8 @@ test.describe("with the fixture backend", () => {
     await expect(nav.getByRole("link", { name: "Machine Graph" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "AI Ecosystem" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Processes" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Security" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Security" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "AI Operator" })).toHaveCount(0);
 
     await expect(page.getByRole("meter", { name: "CPU" })).toHaveAttribute("aria-valuetext", "unavailable");
     await expect(page.getByRole("meter", { name: "Memory" })).toHaveAttribute("aria-valuenow", "25");
@@ -104,5 +105,29 @@ test.describe("with the fixture backend", () => {
     await page.getByRole("row", { name: /fixture-server/ }).click();
     await expect(details.getByRole("button", { name: /Force quit/ })).toBeVisible();
     await expect(details.getByText("fixture-widget (via working directory)")).toBeVisible();
+  });
+
+  test("impact analysis is a simulation with a plan AGASTHY does not run", async ({ page }) => {
+    await page.goto("/#/impact?id=package:homebrew:fixture-lib");
+    await expect(page.getByText("high risk")).toBeVisible();
+    await expect(page.getByText("Other installed software depends on fixture-lib.")).toBeVisible();
+    await expect(page.getByText("Suggested plan (AGASTHY does not run these)")).toBeVisible();
+    await expect(page.getByText("fixture unknown")).toBeVisible();
+  });
+
+  test("online advisory checks are off by default and disclose what is sent", async ({ page }) => {
+    await page.goto("/#/security");
+    const toggle = page.getByRole("checkbox", { name: "Check advisories online with OSV.dev" });
+    await expect(toggle).not.toBeChecked();
+    await page.getByRole("button", { name: "Show exactly what would be sent" }).click();
+    await expect(page.getByText("npm  fixture-pkg@1.0.0")).toBeVisible();
+  });
+
+  test("snapshots list what is missing as commands, never values", async ({ page }) => {
+    await page.goto("/#/snapshots");
+    await page.getByRole("button", { name: "What's missing?" }).click();
+    await expect(page.getByText("npm install --global fixture-pkg@1.0.0")).toBeVisible();
+    await expect(page.getByText("Only the name was recorded; set the value yourself.")).toBeVisible();
+    await expect(page.getByText("AGASTHY does not run these commands", { exact: false })).toBeVisible();
   });
 });

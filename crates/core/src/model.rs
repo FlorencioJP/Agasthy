@@ -38,10 +38,12 @@ pub enum EntityKind {
     McpServer,
     /// An AI instruction, rules, agent, skill, prompt, settings or MCP file.
     AiConfigFile,
+    /// A security or lifecycle finding (vulnerability advisory, outdated package).
+    Finding,
 }
 
 impl EntityKind {
-    pub const ALL: [EntityKind; 13] = [
+    pub const ALL: [EntityKind; 14] = [
         EntityKind::Repository,
         EntityKind::RemoteProject,
         EntityKind::Application,
@@ -55,6 +57,7 @@ impl EntityKind {
         EntityKind::LocalModel,
         EntityKind::McpServer,
         EntityKind::AiConfigFile,
+        EntityKind::Finding,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -72,6 +75,7 @@ impl EntityKind {
             EntityKind::LocalModel => "local_model",
             EntityKind::McpServer => "mcp_server",
             EntityKind::AiConfigFile => "ai_config_file",
+            EntityKind::Finding => "finding",
         }
     }
 
@@ -151,10 +155,12 @@ pub enum RelationKind {
     PotentialConflict,
     /// An instruction file imports or references another.
     References,
+    /// A package or dependency is affected by this finding.
+    HasFinding,
 }
 
 impl RelationKind {
-    pub const ALL: [RelationKind; 18] = [
+    pub const ALL: [RelationKind; 19] = [
         RelationKind::OriginRemote,
         RelationKind::TracksRemote,
         RelationKind::ManagedBy,
@@ -173,6 +179,7 @@ impl RelationKind {
         RelationKind::SameContent,
         RelationKind::PotentialConflict,
         RelationKind::References,
+        RelationKind::HasFinding,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -195,6 +202,7 @@ impl RelationKind {
             RelationKind::SameContent => "same_content",
             RelationKind::PotentialConflict => "potential_conflict",
             RelationKind::References => "references",
+            RelationKind::HasFinding => "has_finding",
         }
     }
 
@@ -284,6 +292,7 @@ pub enum ScanKind {
     Software,
     Packages,
     Ai,
+    Security,
 }
 
 impl ScanKind {
@@ -293,6 +302,7 @@ impl ScanKind {
             ScanKind::Software => "software",
             ScanKind::Packages => "packages",
             ScanKind::Ai => "ai",
+            ScanKind::Security => "security",
         }
     }
 
@@ -302,6 +312,7 @@ impl ScanKind {
             "software" => Some(ScanKind::Software),
             "packages" => Some(ScanKind::Packages),
             "ai" => Some(ScanKind::Ai),
+            "security" => Some(ScanKind::Security),
             _ => None,
         }
     }

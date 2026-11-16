@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-osv-enabled"
+description = "Enables the set_osv_enabled command without any pre-configured scope."
+commands.allow = ["set_osv_enabled"]
+
+[[permission]]
+identifier = "deny-set-osv-enabled"
+description = "Denies the set_osv_enabled command without any pre-configured scope."
+commands.deny = ["set_osv_enabled"]

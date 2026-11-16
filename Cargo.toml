@@ -10,6 +10,9 @@ members = [
   "crates/process-manager",
   "crates/cleanup",
   "crates/actions",
+  "crates/snapshots",
+  "crates/security",
+  "crates/update-lab",
   "crates/cli",
   "apps/desktop/src-tauri",
 ]
@@ -31,6 +34,9 @@ agasthy-graph = { path = "crates/graph" }
 agasthy-process = { path = "crates/process-manager" }
 agasthy-cleanup = { path = "crates/cleanup" }
 agasthy-actions = { path = "crates/actions" }
+agasthy-snapshots = { path = "crates/snapshots" }
+agasthy-security = { path = "crates/security" }
+agasthy-update-lab = { path = "crates/update-lab" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

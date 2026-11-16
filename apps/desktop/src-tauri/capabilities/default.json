@@ -33,6 +33,14 @@
     "allow-cached-disk-analysis",
     "allow-quarantine-list",
     "allow-plan-action",
-    "allow-execute-action"
+    "allow-execute-action",
+    "allow-removal-impact",
+    "allow-snapshots-list",
+    "allow-snapshot-create",
+    "allow-snapshot-compare",
+    "allow-snapshot-reconstruction",
+    "allow-security-settings",
+    "allow-set-osv-enabled",
+    "allow-labs-list"
   ]
 }

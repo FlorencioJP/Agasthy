@@ -1,0 +1,20 @@
+[package]
+name = "agasthy-snapshots"
+description = "Environment snapshots: capture, compare, export and reconstruction plans for AGASTHY"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+agasthy-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

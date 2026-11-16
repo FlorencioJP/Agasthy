@@ -56,6 +56,8 @@ fn ctx<'a>(f: &'a Fixture, eligible: bool) -> ActionContext<'a> {
         home: f.home.clone(),
         scan_roots: vec![],
         repos: vec![],
+        labs: None,
+        repo_index: vec![],
         analysis: Some(DiskAnalysis {
             analysed_at: 0,
             candidates: vec![c],
@@ -220,4 +222,21 @@ fn docker_unavailable_is_not_executable() {
     );
     assert!(!plan.can_execute);
     assert!(plan.summary.contains("Volumes"));
+}
+
+#[test]
+fn lab_actions_need_a_lab_store_and_known_repo() {
+    let f = fixture();
+    let engine = ActionEngine::new();
+    let plan = engine.plan(
+        &ctx(&f, true),
+        ActionRequest::CreateUpdateLab {
+            repo_id: "repository:/nope".into(),
+            ecosystem: LabEcosystem::Npm,
+            package: "x".into(),
+            target_version: "1".into(),
+        },
+    );
+    assert!(!plan.can_execute);
+    assert!(plan.token.is_none());
 }

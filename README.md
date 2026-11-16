@@ -11,7 +11,7 @@ Discover · Understand · Connect · Optimize · Operate</p>
 
 AGASTHY is an open-source, local-first desktop application that discovers what is on a developer's machine, works out how the pieces relate, and explains it with evidence.
 
-> **Status: early development (v0.1.0, Phase 4).** It runs on macOS. It has not been published or released, and nothing here is offered as a download yet.
+> **Status: early development (v0.1.0, Phase 5).** It runs on macOS. It has not been published or released, and nothing here is offered as a download yet.
 
 ## Why it exists
 
@@ -35,13 +35,17 @@ AGASTHY reads the machine directly and keeps what it finds, plus the evidence be
 | **AI ecosystem** | Finds AI coding assistants, desktop AI apps and local inference engines from evidence on disk; the providers they use (with how strongly each is confirmed); MCP servers in every known config; local models; and AI instruction files (`CLAUDE.md`, `AGENTS.md`, Cursor/Copilot rules, agents, skills, commands) globally and per project, with duplicates, overlaps, orphans and potential conflicts. Credential files are only checked for existence and secrets are redacted. |
 | **Processes** | Every process with CPU, memory, listening ports, the project it runs in, and why it is protected if it is. Stop or force-quit your own processes after a reviewed confirmation; system and other users' processes are refused. |
 | **Storage & cleanup** | Measures dependency folders and build output in your projects (only those Git ignores and that contain no tracked files) and a fixed list of developer caches. You pick items, review a dry run, and they move to a quarantine you can restore from; space is freed when you delete them permanently. Docker build cache and dangling images can be pruned; volumes never are. |
+| **Impact analysis** | "What if I remove X?" for packages, runtimes, dependencies, tools and apps: Homebrew packages that need it (from what installed kegs actually link to), executables and runtimes removed with it, and every project whose runtime would break or fall back, with unknowns and a suggested plan AGASTHY does not run. |
+| **Safe Update Lab** | Try a dependency update (npm, pnpm, Cargo) in a separate Git worktree. Install and test steps run only when you approve them (install scripts off by default), and results are copied back only on request. |
+| **Snapshots** | Record installed software, repositories (commit, branch, remote) and environment variable names; compare snapshots; list the commands that would bring back what is missing. Metadata only, not a backup. |
+| **Security & lifecycle** | Outdated Homebrew packages, tools of unknown origin, and, if you opt in, OSV.dev advisories for npm, PyPI, crates.io and Go packages with exact versions. |
 | **Audit & privacy** | An append-only audit log of every action, and a privacy page listing exactly which programs AGASTHY may run. |
 
 Repositories, installed packages, binaries on PATH and applications are kept as **separate kinds**. A local clone is never treated as installed software.
 
 ### Not built yet
 
-Planned, but **not** in this build: security advisories, impact analysis, the update lab, snapshots and the AI operator. See [ROADMAP.md](ROADMAP.md). The app's sidebar shows only the sections that work.
+Planned, but **not** in this build: the AI operator. See [ROADMAP.md](ROADMAP.md). The app's sidebar shows only the sections that work.
 
 ## Screenshots
 
@@ -70,6 +74,9 @@ crates/graph/            graph views, shared dependencies, runtime impact analys
 crates/process-manager/  processes, listening ports, guarded termination
 crates/cleanup/          disk analysis, cleanup safety checks, quarantine, Docker usage
 crates/actions/          typed action engine: plan (dry run) → confirm → execute → verify → audit
+crates/snapshots/        environment snapshots, comparison, reconstruction plans
+crates/security/         outdated software, unknown provenance, opt-in OSV.dev advisories
+crates/update-lab/       Git-worktree labs for trying dependency updates
 crates/system-monitor/   CPU / memory / disk / process telemetry
 crates/cli/              `agasthy` headless CLI (JSON output)
 packages/shared-types/   TypeScript types generated from the Rust model (ts-rs)
@@ -119,7 +126,7 @@ Details: [docs/development.md](docs/development.md).
 
 ## Privacy
 
-AGASTHY makes no internet requests in this build: no account, telemetry or update checks (the AI scan only checks whether local inference engines are listening on 127.0.0.1). It only looks for repositories in folders you add, stores results in a local SQLite file, and strips credentials from Git URLs before storing them. It runs external programs only from an allowlist, with fixed arguments and never through a shell. Full details: [docs/privacy.md](docs/privacy.md).
+AGASTHY makes no internet requests unless you turn on OSV.dev advisory checks: no account, telemetry or update checks (the AI scan only checks whether local inference engines are listening on 127.0.0.1). It only looks for repositories in folders you add, stores results in a local SQLite file, and strips credentials from Git URLs before storing them. It runs external programs only from an allowlist, with fixed arguments and never through a shell. Full details: [docs/privacy.md](docs/privacy.md).
 
 ## Roadmap
 

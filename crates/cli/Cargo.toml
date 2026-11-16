@@ -19,6 +19,7 @@ agasthy-system-monitor.workspace = true
 agasthy-graph.workspace = true
 agasthy-process.workspace = true
 agasthy-cleanup.workspace = true
+agasthy-security.workspace = true
 serde_json.workspace = true
 
 [lints]

@@ -1,12 +1,12 @@
 import { Sidebar, SidebarSection, StateView, Wordmark, sidebarItemClass } from "@agasthy/ui";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Activity, Bot, Boxes, Gauge, HardDrive, Loader2, Network, Settings, Shield } from "lucide-react";
+import { Activity, Bot, Boxes, Camera, Gauge, GitCompareArrows, HardDrive, Loader2, Network, Settings, Shield, ShieldAlert } from "lucide-react";
 import { inDesktopShell } from "../lib/ipc";
 import { useAppInfo } from "../lib/queries";
 import { SCAN_LABELS, useScanActivity } from "./scan-activity";
 
 // Only sections with a working implementation appear here. Later phases add
-// Security, Impact Analysis, Snapshots and AI Operator as they are built.
+// The AI Operator is added when it is built.
 const NAV = [
   { to: "/", label: "Overview", icon: Gauge, exact: true },
   { to: "/discovery", label: "Discovery", icon: Boxes, exact: false },
@@ -14,6 +14,9 @@ const NAV = [
   { to: "/ai", label: "AI Ecosystem", icon: Bot, exact: false },
   { to: "/processes", label: "Processes", icon: Activity, exact: false },
   { to: "/storage", label: "Storage & Cleanup", icon: HardDrive, exact: false },
+  { to: "/security", label: "Security", icon: ShieldAlert, exact: false },
+  { to: "/impact", label: "Impact Analysis", icon: GitCompareArrows, exact: false },
+  { to: "/snapshots", label: "Snapshots", icon: Camera, exact: false },
 ] as const;
 
 const SYSTEM_NAV = [

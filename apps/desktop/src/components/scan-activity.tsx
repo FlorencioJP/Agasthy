@@ -90,6 +90,7 @@ export const SCAN_LABELS: Record<ScanKind, string> = {
   software: "Applications & tools",
   packages: "Packages",
   ai: "AI ecosystem",
+  security: "Security & lifecycle",
 };
 
 export function progressLabel(p: ScanProgress | undefined): string {

@@ -279,7 +279,7 @@ impl Store {
     pub fn recent_entities(&self, limit: u32) -> CoreResult<Vec<Entity>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, kind, name, path, version, source, attributes, first_seen, last_seen
-             FROM entities WHERE kind NOT IN ('remote_project', 'dependency', 'ai_config_file', 'mcp_server')
+             FROM entities WHERE kind NOT IN ('remote_project', 'dependency', 'ai_config_file', 'mcp_server', 'finding')
              ORDER BY first_seen DESC, name COLLATE NOCASE LIMIT ?1",
         )?;
         let rows = stmt.query_map([limit], entity_from_row)?;
@@ -682,7 +682,9 @@ fn scan_relationship_kinds(kind: ScanKind) -> &'static [RelationKind] {
             RelationKind::ManagedBy,
             RelationKind::UpstreamProject,
             RelationKind::Provides,
+            RelationKind::DependsOn,
         ],
+        ScanKind::Security => &[RelationKind::HasFinding],
         ScanKind::Ai => &[
             RelationKind::Contains,
             RelationKind::ConfiguresTool,

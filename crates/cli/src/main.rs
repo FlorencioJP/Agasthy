@@ -19,7 +19,8 @@ USAGE:
     agasthy scan <folder>... [--depth N] [--db FILE] [--full]
     agasthy software [--db FILE] [--full]
     agasthy ai [--db FILE] [--full]        (projects come from repositories in --db)
-    agasthy impact <runtime-entity-id> --db FILE
+    agasthy impact <entity-id> --db FILE          (what if it were removed?)
+    agasthy security --db FILE                    (local checks only; never contacts OSV)
     agasthy shared --db FILE
     agasthy packages [--db FILE] [--full]
     agasthy telemetry
@@ -184,13 +185,36 @@ fn run(raw: &[String]) -> Result<(), String> {
             );
             return Ok(());
         }
+        "security" => {
+            let db = db.ok_or("this command needs --db FILE")?;
+            let tmp = std::env::temp_dir().join("agasthy-cli");
+            let input = agasthy_security::SecurityInput {
+                osv_enabled: false,
+                queries: vec![],
+                unknown_origin: vec![],
+                work_dir: &tmp,
+            };
+            let (batch, report) = agasthy_security::scan(&input, &runner);
+            let mut store = Store::open(&db).map_err(|e| e.to_string())?;
+            let id = store
+                .begin_scan(batch.scan_kind)
+                .map_err(|e| e.to_string())?;
+            store.ingest(id, &batch).map_err(|e| e.to_string())?;
+            let names: Vec<&String> = batch.entities.iter().map(|e| &e.name).collect();
+            let out = serde_json::json!({ "report": report, "findings": names });
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?
+            );
+            return Ok(());
+        }
         "impact" | "shared" => {
             let db = db.ok_or("this command needs --db FILE")?;
             let store = Store::open(&db).map_err(|e| e.to_string())?;
             let out = if cmd == "impact" {
-                let id = args.first().ok_or("impact needs a runtime entity id")?;
+                let id = args.first().ok_or("impact needs an entity id")?;
                 serde_json::to_value(
-                    agasthy_graph::runtime_impact(&store, id).map_err(|e| e.to_string())?,
+                    agasthy_graph::removal_impact(&store, id).map_err(|e| e.to_string())?,
                 )
             } else {
                 serde_json::to_value(

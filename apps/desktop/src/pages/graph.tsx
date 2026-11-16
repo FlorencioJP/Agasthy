@@ -22,6 +22,7 @@ import {
   Cloud,
   FileText,
   Plug,
+  ShieldAlert,
   Boxes,
   Cpu,
   Crosshair,
@@ -64,6 +65,7 @@ export const KIND_STYLE: Record<EntityKind, { color: string; icon: ComponentType
   local_model: { color: "#7aa35a", icon: Brain },
   mcp_server: { color: "#5b8def", icon: Plug },
   ai_config_file: { color: "#a58b6f", icon: FileText },
+  finding: { color: "var(--danger)", icon: ShieldAlert },
 };
 
 const REL_SHORT: Record<RelationKind, string> = {
@@ -85,6 +87,7 @@ const REL_SHORT: Record<RelationKind, string> = {
   same_content: "identical",
   potential_conflict: "conflicts?",
   references: "imports",
+  has_finding: "finding",
 };
 
 const FILTERABLE: EntityKind[] = [

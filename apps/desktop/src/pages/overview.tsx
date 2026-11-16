@@ -364,7 +364,7 @@ function RecentPanel({ recent }: { recent: Entity[] }) {
 
 function ScanStatusPanel({ scans }: { scans: ScanRecord[] }) {
   const activity = useScanActivity();
-  const kinds: ScanKind[] = ["repositories", "software", "packages", "ai"];
+  const kinds: ScanKind[] = ["repositories", "software", "packages", "ai", "security"];
   return (
     <Panel title="Scans">
       <ul className="divide-y divide-line">

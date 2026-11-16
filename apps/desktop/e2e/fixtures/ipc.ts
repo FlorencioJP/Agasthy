@@ -262,6 +262,41 @@ export async function installFixtureIpc(page: Page): Promise<void> {
       ports: avail(1),
       own_pid: 1,
     };
+    responses.removal_impact = {
+      target: { id: "package:homebrew:fixture-lib", kind: "package", name: "fixture-lib", path: null },
+      risk: "high",
+      summary: "Other installed software depends on fixture-lib.",
+      sections: [
+        {
+          title: "Packages that need fixture-lib",
+          entries: [{ entity: { id: "package:homebrew:fixture-app", kind: "package", name: "fixture-app", path: null }, explanation: "depends on it", confidence: "verified" }],
+        },
+      ],
+      runtime_reports: [],
+      unknowns: ["fixture unknown"],
+      plan: ["Double-check with `brew uses --installed fixture-lib`."],
+      recovery: ["`brew install fixture-lib`"],
+    };
+    responses.security_settings = {
+      osv_enabled: false,
+      preview: [{ entity_id: "package:npm:fixture-pkg", ecosystem: "npm", name: "fixture-pkg", version: "1.0.0" }],
+      preview_total: 1,
+      last_report: null,
+    };
+    responses.set_osv_enabled = null;
+    responses.labs_list = [];
+    responses.snapshots_list = [
+      { id: "snap-1", name: "Fixture snapshot", created_at: now - 3600_000, hostname: "fixture-host", counts: { package: 1 }, path: "/fixture/data/snapshots/snap-1.json" },
+    ];
+    responses.snapshot_reconstruction = {
+      snapshot: "snap-1",
+      steps: [
+        { item: { section: "package", key: "package:npm:fixture-pkg", name: "fixture-pkg", version: "1.0.0", details: {} }, command: "npm install --global fixture-pkg@1.0.0", note: null },
+        { item: { section: "env_var", key: "FIXTURE_TOKEN", name: "FIXTURE_TOKEN", version: null, details: {} }, command: null, note: "Only the name was recorded; set the value yourself." },
+      ],
+      supported: 1,
+      unsupported: 1,
+    };
     const byKind: Record<string, unknown[]> = { repository: [repo], ai_tool: [aiTool], ai_config_file: [fileA, fileB] };
     window.__AGASTHY_TEST_IPC__ = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
       if (cmd === "list_entities") {
