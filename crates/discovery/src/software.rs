@@ -137,6 +137,34 @@ pub fn scan_software(
     batch
 }
 
+/// Runtime family for a catalogued runtime tool id.
+pub fn runtime_family(tool: &str) -> Option<&'static str> {
+    Some(match tool {
+        "node" => "node",
+        "python3" | "python" => "python",
+        "rustc" => "rust",
+        "go" => "go",
+        "ruby" => "ruby",
+        _ => return None,
+    })
+}
+
+/// Runtime executables on PATH, with the entity ids the software scan gives them.
+/// Cheap: no version probing.
+pub fn runtime_copies(platform: &dyn Platform) -> Vec<crate::RuntimeCopy> {
+    let dirs = platform.executable_search_dirs();
+    locate_tools(platform, &dirs)
+        .into_iter()
+        .filter(|f| f.spec.category == ToolCategory::Runtime)
+        .filter_map(|f| {
+            runtime_family(f.spec.id).map(|family| crate::RuntimeCopy {
+                family: family.into(),
+                entity_id: binary_id(EntityKind::Runtime, &f.path),
+            })
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone)]
 pub struct FoundTool {
     pub spec: ToolSpec,
@@ -264,6 +292,7 @@ fn tool_entity(
     let (install_hint, relationship) = infer_installer(&effective);
     let id = binary_id(kind, &f.path);
     let relationship = relationship.map(|(pkg_id, detail, confidence)| RelationshipInput {
+        attributes: serde_json::Value::Null,
         from_id: id.clone(),
         to_id: pkg_id,
         kind: RelationKind::InstalledBy,
@@ -290,6 +319,7 @@ fn tool_entity(
         directory_origin: f.dir.origin,
         resolved_path: resolved.map(|r| r.display().to_string()),
         active: f.rank == 0,
+        rank: f.rank as u32,
         shadowed_by: (f.rank > 0).then(|| f.first_path.display().to_string()),
         version: version.clone(),
         version_command,

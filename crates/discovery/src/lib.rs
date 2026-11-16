@@ -11,6 +11,7 @@
 pub mod attrs;
 pub mod catalog;
 pub mod git;
+pub mod manifests;
 pub mod packages;
 pub mod repos;
 pub mod roots;
@@ -18,9 +19,9 @@ pub mod software;
 pub mod version;
 
 pub use packages::scan_packages;
-pub use repos::{RepoScanOptions, scan_repositories};
+pub use repos::{RepoScanOptions, RuntimeCopy, scan_repositories};
 pub use roots::{RootError, validate_scan_root};
-pub use software::scan_software;
+pub use software::{runtime_copies, scan_software};
 
 /// Progress callback payload for long scans.
 #[derive(Debug, Clone, serde::Serialize, ts_rs::TS)]

@@ -1,4 +1,4 @@
-import type { EntityKind, ScanKind } from "@agasthy/shared-types";
+import type { EntityKind, OverviewKind, ScanKind } from "@agasthy/shared-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./ipc";
 
@@ -13,6 +13,9 @@ export const keys = {
   audit: ["audit"] as const,
   entities: (kind: EntityKind | null, text: string) => ["entities", kind, text] as const,
   entity: (id: string) => ["entity", id] as const,
+  graph: ["graph"] as const,
+  impact: (id: string) => ["impact", id] as const,
+  shared: ["shared-dependencies"] as const,
 };
 
 export const useAppInfo = () => useQuery({ queryKey: keys.appInfo, queryFn: api.appInfo, staleTime: Infinity });
@@ -51,12 +54,27 @@ export const useEntityDetail = (id: string | null) =>
     enabled: Boolean(id),
   });
 
+export const useGraphOverview = (kind: OverviewKind, enabled: boolean) =>
+  useQuery({ queryKey: [...keys.graph, "overview", kind], queryFn: () => api.graphOverview(kind), enabled });
+
+export const useGraphNeighborhood = (center: string | null, depth: number, kinds: EntityKind[]) =>
+  useQuery({
+    queryKey: [...keys.graph, "focus", center, depth, kinds.join(",")],
+    queryFn: () => api.graphNeighborhood(center as string, depth, kinds),
+    enabled: Boolean(center),
+  });
+
+export const useRuntimeImpact = (id: string | null) =>
+  useQuery({ queryKey: keys.impact(id ?? ""), queryFn: () => api.runtimeImpact(id as string), enabled: Boolean(id) });
+
+export const useSharedDependencies = () => useQuery({ queryKey: keys.shared, queryFn: () => api.sharedDependencies(15) });
+
 /** Invalidate everything derived from the database after a write. */
 export function useInvalidateData() {
   const qc = useQueryClient();
   return () =>
     Promise.all(
-      [keys.overview, keys.roots, keys.scans, keys.audit, ["entities"], ["entity"], keys.running].map((k) =>
+      [keys.overview, keys.roots, keys.scans, keys.audit, ["entities"], ["entity"], keys.running, keys.graph, ["impact"], keys.shared].map((k) =>
         qc.invalidateQueries({ queryKey: k }),
       ),
     );

@@ -18,6 +18,8 @@ agasthy — read-only developer machine discovery
 USAGE:
     agasthy scan <folder>... [--depth N] [--db FILE] [--full]
     agasthy software [--db FILE] [--full]
+    agasthy impact <runtime-entity-id> --db FILE
+    agasthy shared --db FILE
     agasthy packages [--db FILE] [--full]
     agasthy telemetry
     agasthy platform
@@ -82,7 +84,9 @@ fn run(raw: &[String]) -> Result<(), String> {
                     validate_scan_root(platform.as_ref(), a).map_err(|e| format!("{a}: {e}"))?;
                 roots.push((p, depth));
             }
-            scan_repositories(&RepoScanOptions::new(roots), &runner, &|p| {
+            let mut opts = RepoScanOptions::new(roots);
+            opts.runtimes = agasthy_discovery::runtime_copies(platform.as_ref());
+            scan_repositories(&opts, &runner, &|p| {
                 if p.phase == "searching" {
                     eprintln!("searching {}", p.current.unwrap_or_default());
                 }
@@ -98,6 +102,26 @@ fn run(raw: &[String]) -> Result<(), String> {
             println!(
                 "{}",
                 serde_json::to_string_pretty(&s).map_err(|e| e.to_string())?
+            );
+            return Ok(());
+        }
+        "impact" | "shared" => {
+            let db = db.ok_or("this command needs --db FILE")?;
+            let store = Store::open(&db).map_err(|e| e.to_string())?;
+            let out = if cmd == "impact" {
+                let id = args.first().ok_or("impact needs a runtime entity id")?;
+                serde_json::to_value(
+                    agasthy_graph::runtime_impact(&store, id).map_err(|e| e.to_string())?,
+                )
+            } else {
+                serde_json::to_value(
+                    agasthy_graph::shared_dependencies(&store, 25).map_err(|e| e.to_string())?,
+                )
+            }
+            .map_err(|e| e.to_string())?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?
             );
             return Ok(());
         }

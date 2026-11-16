@@ -26,10 +26,12 @@ pub enum EntityKind {
     Package,
     /// A package manager whose inventory AGASTHY read.
     PackageManager,
+    /// A dependency declared in a project manifest (`ecosystem:name`).
+    Dependency,
 }
 
 impl EntityKind {
-    pub const ALL: [EntityKind; 7] = [
+    pub const ALL: [EntityKind; 8] = [
         EntityKind::Repository,
         EntityKind::RemoteProject,
         EntityKind::Application,
@@ -37,6 +39,7 @@ impl EntityKind {
         EntityKind::Runtime,
         EntityKind::Package,
         EntityKind::PackageManager,
+        EntityKind::Dependency,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -48,6 +51,7 @@ impl EntityKind {
             EntityKind::Runtime => "runtime",
             EntityKind::Package => "package",
             EntityKind::PackageManager => "package_manager",
+            EntityKind::Dependency => "dependency",
         }
     }
 
@@ -105,10 +109,14 @@ pub enum RelationKind {
     DuplicateClone,
     /// A binary on PATH resolves into files owned by this package.
     InstalledBy,
+    /// A project's manifest declares this dependency.
+    DependsOn,
+    /// A project declares a runtime version requirement this runtime may satisfy.
+    RequiresRuntime,
 }
 
 impl RelationKind {
-    pub const ALL: [RelationKind; 7] = [
+    pub const ALL: [RelationKind; 9] = [
         RelationKind::OriginRemote,
         RelationKind::TracksRemote,
         RelationKind::ManagedBy,
@@ -116,6 +124,8 @@ impl RelationKind {
         RelationKind::Provides,
         RelationKind::DuplicateClone,
         RelationKind::InstalledBy,
+        RelationKind::DependsOn,
+        RelationKind::RequiresRuntime,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -127,6 +137,8 @@ impl RelationKind {
             RelationKind::Provides => "provides",
             RelationKind::DuplicateClone => "duplicate_clone",
             RelationKind::InstalledBy => "installed_by",
+            RelationKind::DependsOn => "depends_on",
+            RelationKind::RequiresRuntime => "requires_runtime",
         }
     }
 
@@ -186,6 +198,9 @@ pub struct RelationshipInput {
     pub kind: RelationKind,
     pub confidence: Confidence,
     pub evidence: Vec<EvidenceInput>,
+    /// Kind-specific data, e.g. a version constraint. `Null` when unused.
+    #[serde(default)]
+    pub attributes: serde_json::Value,
 }
 
 impl RelationshipInput {
@@ -323,9 +338,22 @@ pub struct Relationship {
     pub from_id: String,
     pub to_id: String,
     pub confidence: Confidence,
+    pub attributes: serde_json::Value,
     pub evidence: Vec<Evidence>,
     /// The entity on the other side of the relationship, from the viewer's side.
     pub other: Option<EntityRef>,
+}
+
+/// A relationship without its evidence, for graph traversal and rendering.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Edge {
+    pub id: String,
+    pub kind: RelationKind,
+    pub from_id: String,
+    pub to_id: String,
+    pub confidence: Confidence,
+    pub attributes: serde_json::Value,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

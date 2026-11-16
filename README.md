@@ -11,7 +11,7 @@ Discover · Understand · Connect · Optimize · Operate</p>
 
 AGASTHY is an open-source, local-first desktop application that discovers what is on a developer's machine, works out how the pieces relate, and explains it with evidence.
 
-> **Status: early development (v0.1.0, Phase 1).** It runs on macOS. It has not been published or released, and nothing here is offered as a download yet.
+> **Status: early development (v0.1.0, Phase 2).** It runs on macOS. It has not been published or released, and nothing here is offered as a download yet.
 
 ## Why it exists
 
@@ -19,7 +19,7 @@ A developer machine accumulates hundreds of components spread across directories
 
 AGASTHY reads the machine directly and keeps what it finds, plus the evidence behind each fact, in a local database.
 
-## What works today (Phase 1, macOS)
+## What works today (macOS)
 
 | Area | What AGASTHY does |
 |---|---|
@@ -29,13 +29,16 @@ AGASTHY reads the machine directly and keeps what it finds, plus the evidence be
 | **CLI tools & runtimes** | A curated catalogue of about 75 developer tools. For each copy on PATH: version, which copy is active and which are shadowed, and how it was installed (for example, it resolves into a Homebrew keg). |
 | **Packages** | Read-only inventories from Homebrew (formulae and casks), npm and pnpm globals, uv tools, pip (default `python3`) and `cargo install`. A missing or failing manager is reported as such, never as "0 packages". |
 | **Provenance** | Every fact carries evidence and a confidence level (*verified*, *strong*, *probable*, *unknown*). A Git remote read from the repository's own config is *verified*; an upstream taken from a Homebrew formula's homepage is *strong*. Nothing is guessed from names. |
+| **Dependencies** | Reads `package.json`, `Cargo.toml`, `pyproject.toml`, `requirements.txt` and `go.mod` (including nested packages), with resolved versions from `package-lock.json`, `Cargo.lock` and `uv.lock`. Shows which dependencies your projects share. |
+| **Runtime requirements & impact** | Links projects to the runtimes they declare (`engines.node`, `.nvmrc`, `requires-python`, `rust-version`, `go`, …). Answers *"what breaks if I remove this runtime?"*: for each project, whether it would break, fall back to another copy on PATH, or be unaffected, and what is unknown. Nothing is removed; it is a simulation. |
+| **Machine Graph** | An interactive graph of projects, runtimes, dependencies, packages, binaries and upstream projects, with focus, depth and kind filters, search, and the evidence behind every edge. |
 | **Audit & privacy** | An append-only audit log of every action, and a privacy page listing exactly which programs AGASTHY may run. |
 
 Repositories, installed packages, binaries on PATH and applications are kept as **separate kinds**. A local clone is never treated as installed software.
 
 ### Not built yet
 
-Planned, but **not** in this build: the machine graph view, AI-ecosystem discovery (assistants, providers, MCP servers, instruction files), process management, disk cleanup, security advisories, impact analysis, the update lab, snapshots and the AI operator. See [ROADMAP.md](ROADMAP.md). The app's sidebar shows only the sections that work.
+Planned, but **not** in this build: AI-ecosystem discovery (assistants, providers, MCP servers, instruction files), process management, disk cleanup, security advisories, impact analysis, the update lab, snapshots and the AI operator. See [ROADMAP.md](ROADMAP.md). The app's sidebar shows only the sections that work.
 
 ## Screenshots
 
@@ -60,6 +63,7 @@ crates/core/             domain model, SQLite store (FTS5), migrations, audit lo
 crates/platform-adapters/ OS adapters (macOS / Windows / Linux) and the guarded command runner
 crates/discovery/        read-only discovery: repositories, software, packages
 crates/provenance/       remote-URL parsing, credential redaction, confidence rules
+crates/graph/            graph views, shared dependencies, runtime impact analysis
 crates/system-monitor/   CPU / memory / disk / process telemetry
 crates/cli/              `agasthy` headless CLI (JSON output)
 packages/shared-types/   TypeScript types generated from the Rust model (ts-rs)
@@ -96,6 +100,7 @@ cargo run -p agasthy-cli -- scan ~/code --depth 4
 cargo run -p agasthy-cli -- software
 cargo run -p agasthy-cli -- packages
 cargo run -p agasthy-cli -- telemetry
+cargo run -p agasthy-cli -- impact runtime:/usr/local/bin/python3 --db <file>
 ```
 
 Build an unsigned macOS app bundle:

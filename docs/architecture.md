@@ -15,7 +15,8 @@ agasthy-core ─────────────┐  domain model, Store (SQ
 agasthy-platform ─────────┤  OS adapters + CommandRunner
 agasthy-provenance ───────┤  remote parsing, redaction, confidence rules
 agasthy-system-monitor ───┤  telemetry (sysinfo)
-agasthy-discovery ────────┘  repositories, software, packages → IngestBatch
+agasthy-discovery ────────┤  repositories, manifests, software, packages → IngestBatch
+agasthy-graph ────────────┘  views, shared dependencies, impact analysis (reads the Store)
         │
         ├── agasthy-cli       headless JSON output
         └── agasthy-desktop   Tauri commands → React UI
@@ -30,7 +31,7 @@ Stored in SQLite (`migrations/0001_init.sql`):
 | Table | Purpose |
 |---|---|
 | `entities` | One row per discovered thing. `kind` ∈ repository, remote_project, application, binary, runtime, package, package_manager. Kind-specific data lives in `attributes` (JSON), whose shape is a typed Rust struct exported to TypeScript. |
-| `relationships` | Typed edges: `origin_remote`, `tracks_remote`, `managed_by`, `upstream_project`, `provides`, `installed_by`, `duplicate_clone`, each with a confidence level. |
+| `relationships` | Typed edges: `origin_remote`, `tracks_remote`, `managed_by`, `upstream_project`, `provides`, `installed_by`, `duplicate_clone`, `depends_on`, `requires_runtime`, each with a confidence level and kind-specific `attributes` (for example the declarations behind a `depends_on` edge: manifest, constraint, scope, resolved version). |
 | `evidence` | Observations backing an entity *or* a relationship. |
 | `scans` | One row per scan with status, counts and non-fatal issues. |
 | `scan_roots` | Folders the user approved for repository discovery. |
@@ -49,6 +50,15 @@ Entity IDs are deterministic (`repository:<path>`, `package:homebrew:<name>`, `r
 | strong | A Homebrew formula's homepage names a GitHub project; an npm global path. |
 | probable | Indirect inference (reserved). |
 | unknown | Name similarity only; never used to create a relationship. |
+
+## Graph and impact analysis
+
+The graph is the `entities` and `relationships` tables; there is no separate graph store. `agasthy-graph` provides:
+
+- **Views.** `neighborhood` does a breadth-first walk from a node (depth 1–3, kind filter, node cap; package managers are not expanded through because they link to every package). `overview` shows either *Projects* (repositories, required runtimes, dependencies shared by 2+ projects, upstreams linked twice or more) or *Installed software*.
+- **Runtime impact.** For a runtime copy, each project with a `requires_runtime` edge is classified as *breaks*, *falls back*, *unaffected* (the copy is shadowed), *already incompatible* or *unknown*. The successor is the next copy in AGASTHY's PATH order, and constraints are evaluated by `version_req` (npm, Cargo, PEP 440, version files). Constraints such as `lts/*` or `stable`, and projects that only imply a runtime, are *unknown*, never guessed. Each report states its limitations (version managers, other shells' PATH, non-project consumers).
+
+`depends_on` edges come from manifests (*verified*: the file states it). `requires_runtime` edges are *verified* when a version is declared and *probable* when use is only implied by a manifest's presence. Dependencies are declarations, not installations; the UI says so.
 
 ## Safety boundaries
 

@@ -10,9 +10,10 @@ use agasthy_core::{
     RelationKind, ScanIssue, ScanKind, ScanRecord, ScanRoot,
 };
 use agasthy_discovery::{
-    RepoScanOptions, ScanProgress, scan_packages, scan_repositories, scan_software,
+    RepoScanOptions, ScanProgress, runtime_copies, scan_packages, scan_repositories, scan_software,
     validate_scan_root,
 };
+use agasthy_graph::{GraphView, ImpactReport, OverviewKind, SharedDependency};
 use agasthy_platform::{GpuInfo, PlatformInfo, SearchDirOrigin};
 use agasthy_system_monitor::TelemetrySnapshot;
 use serde::Serialize;
@@ -315,7 +316,10 @@ fn execute_scan(app: &AppHandle, inner: &Inner, kind: ScanKind) -> CmdResult<Sca
                 })?;
                 return Err(message);
             }
-            let mut batch = scan_repositories(&RepoScanOptions::new(valid), &inner.runner, &emit);
+            let mut opts = RepoScanOptions::new(valid);
+            // Link projects to the runtime copies on PATH (ids match the software scan).
+            opts.runtimes = runtime_copies(inner.platform.as_ref());
+            let mut batch = scan_repositories(&opts, &inner.runner, &emit);
             batch.issues.extend(issues);
             batch
         }
@@ -376,4 +380,44 @@ pub fn list_scans(state: State<'_, AppState>, limit: Option<u32>) -> CmdResult<V
 #[tauri::command]
 pub fn list_audit(state: State<'_, AppState>, limit: Option<u32>) -> CmdResult<Vec<AuditEntry>> {
     with_store(&state.0, |s| s.list_audit(limit.unwrap_or(100).min(1000)))
+}
+
+// ----- graph -----
+
+#[tauri::command]
+pub fn graph_neighborhood(
+    state: State<'_, AppState>,
+    center: String,
+    depth: Option<u32>,
+    kinds: Option<Vec<EntityKind>>,
+) -> CmdResult<GraphView> {
+    with_store(&state.0, |s| {
+        agasthy_graph::neighborhood(
+            s,
+            &center,
+            depth.unwrap_or(1).clamp(1, 3),
+            &kinds.unwrap_or_default(),
+            250,
+        )
+    })
+}
+
+#[tauri::command]
+pub fn graph_overview(state: State<'_, AppState>, kind: OverviewKind) -> CmdResult<GraphView> {
+    with_store(&state.0, |s| agasthy_graph::overview(s, kind, 400))
+}
+
+#[tauri::command]
+pub fn runtime_impact(state: State<'_, AppState>, id: String) -> CmdResult<Option<ImpactReport>> {
+    with_store(&state.0, |s| agasthy_graph::runtime_impact(s, &id))
+}
+
+#[tauri::command]
+pub fn shared_dependencies(
+    state: State<'_, AppState>,
+    limit: Option<u32>,
+) -> CmdResult<Vec<SharedDependency>> {
+    with_store(&state.0, |s| {
+        agasthy_graph::shared_dependencies(s, limit.unwrap_or(25).min(200))
+    })
 }

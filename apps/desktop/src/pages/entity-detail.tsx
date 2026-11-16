@@ -1,5 +1,6 @@
 import type {
   BinaryAttrs,
+  DependencyAttrs,
   Entity,
   EntityKind,
   Evidence,
@@ -29,16 +30,24 @@ const REL_LABEL: Record<RelationKind, { out: string; in: string }> = {
   provides: { out: "Provides", in: "Installed by package" },
   duplicate_clone: { out: "Duplicate clone of", in: "Duplicate clone" },
   installed_by: { out: "Installed by package", in: "Provides executable" },
+  depends_on: { out: "Depends on", in: "Used by project" },
+  requires_runtime: { out: "Requires runtime", in: "Required by project" },
 };
 
 export function EntityDetailPanel({
   id,
   onClose,
   onNavigate,
+  actions,
+  extra,
 }: {
   id: string;
   onClose: () => void;
   onNavigate: (id: string, kind: EntityKind) => void;
+  /** Extra buttons shown under the header. */
+  actions?: ReactNode;
+  /** Extra sections rendered for the loaded entity (e.g. impact analysis). */
+  extra?: (entity: Entity) => ReactNode;
 }) {
   const detail = useEntityDetail(id);
   return (
@@ -58,6 +67,8 @@ export function EntityDetailPanel({
       ) : (
         <div className="flex flex-col gap-5 p-4">
           <Header entity={detail.data.entity} />
+          {actions ? <div className="-mt-3 flex gap-1.5">{actions}</div> : null}
+          {extra?.(detail.data.entity)}
           <Attributes entity={detail.data.entity} />
           <Relationships outgoing={detail.data.outgoing} incoming={detail.data.incoming} onNavigate={onNavigate} />
           <EvidenceList evidence={detail.data.evidence} />
@@ -158,6 +169,8 @@ function Attributes({ entity }: { entity: Entity }) {
               ["License", r.license ? `${r.license.spdx ?? "unrecognised"} · ${r.license.source}` : "none found"],
               ["Manifests", r.manifests.length ? r.manifests.join(", ") : "none"],
               ["Size on disk", <Avail value={r.size_bytes} render={(b) => formatBytes(b)} />],
+              ["Dependencies", r.dependency_count != null ? `${r.dependency_count} declared` : "—"],
+              ["Runtimes", r.runtime_requirements?.length ? r.runtime_requirements.join(", ") : "none declared"],
               ["Git dir", r.git_dir_kind === "file" ? "linked worktree or submodule" : "standard clone"],
               ["Scan folder", shortenHome(r.scan_root)],
             ]}
@@ -251,6 +264,17 @@ function Attributes({ entity }: { entity: Entity }) {
         </Section>
       );
     }
+    case "dependency": {
+      const d = a as unknown as DependencyAttrs;
+      return (
+        <Section title="Declared dependency">
+          <Kv items={[["Ecosystem", d.ecosystem], ["Package", d.package]]} />
+          <p className="text-[11.5px] leading-5 text-faint">
+            Declared in project manifests. This does not mean it is installed; versions shown below come from lockfiles when present.
+          </p>
+        </Section>
+      );
+    }
     case "remote_project": {
       const r = a as unknown as RemoteRef;
       return (
@@ -271,9 +295,16 @@ function Relationships({
   incoming: Relationship[];
   onNavigate: (id: string, kind: EntityKind) => void;
 }) {
-  const rows = [...outgoing.map((r) => ({ r, dir: "out" as const })), ...incoming.map((r) => ({ r, dir: "in" as const }))];
+  const [showAll, setShowAll] = useState(false);
+  // Most informative first: provenance and runtime links before long dependency lists.
+  const rank = (k: RelationKind) => (k === "depends_on" ? 2 : k === "managed_by" ? 1 : 0);
+  const all = [...outgoing.map((r) => ({ r, dir: "out" as const })), ...incoming.map((r) => ({ r, dir: "in" as const }))].sort(
+    (a, b) => rank(a.r.kind) - rank(b.r.kind),
+  );
+  const LIMIT = 15;
+  const rows = showAll ? all : all.slice(0, LIMIT);
   return (
-    <Section title={`Relationships (${rows.length})`}>
+    <Section title={`Relationships (${all.length})`}>
       {rows.length === 0 ? (
         <div className="text-[12px] text-faint">No relationships established from the available evidence.</div>
       ) : (
@@ -301,6 +332,13 @@ function Relationships({
               ))}
             </li>
           ))}
+          {all.length > LIMIT ? (
+            <li>
+              <button className="text-[12px] text-accent underline-offset-2 hover:underline" onClick={() => setShowAll((v) => !v)}>
+                {showAll ? "Show fewer" : `Show all ${all.length}`}
+              </button>
+            </li>
+          ) : null}
         </ul>
       )}
     </Section>

@@ -19,6 +19,7 @@ agasthy-core.workspace = true
 agasthy-platform.workspace = true
 agasthy-discovery.workspace = true
 agasthy-system-monitor.workspace = true
+agasthy-graph.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 ts-rs.workspace = true

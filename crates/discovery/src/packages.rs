@@ -494,6 +494,7 @@ fn push_package(
 ) {
     let manager = rec.attrs.manager;
     batch.relationships.push(RelationshipInput {
+        attributes: serde_json::Value::Null,
         from_id: rec.id.clone(),
         to_id: manager_entity_id.to_string(),
         kind: RelationKind::ManagedBy,
@@ -514,6 +515,7 @@ fn push_package(
         }
         let conf = confidence_for(ProvenanceSource::PackageMetadata);
         batch.relationships.push(RelationshipInput {
+            attributes: serde_json::Value::Null,
             from_id: rec.id.clone(),
             to_id: rid,
             kind: RelationKind::UpstreamProject,
@@ -538,6 +540,7 @@ fn push_package(
                 .find(|p| Path::new(p).is_dir())
             {
                 batch.relationships.push(RelationshipInput {
+                    attributes: serde_json::Value::Null,
                     from_id: rec.id.clone(),
                     to_id: app_id(&path.display().to_string()),
                     kind: RelationKind::Provides,

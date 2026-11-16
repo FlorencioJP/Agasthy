@@ -1,0 +1,17 @@
+[package]
+name = "agasthy-graph"
+description = "Machine intelligence graph: traversal, views and impact analysis for AGASTHY"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+agasthy-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs = { workspace = true, features = ["serde-json-impl"] }
+
+[lints]
+workspace = true

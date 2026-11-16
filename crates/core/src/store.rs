@@ -9,7 +9,10 @@ use crate::model::*;
 use crate::time::now_ms;
 
 /// Ordered list of embedded migrations. Index + 1 is the schema version.
-const MIGRATIONS: &[&str] = &[include_str!("../../../migrations/0001_init.sql")];
+const MIGRATIONS: &[&str] = &[
+    include_str!("../../../migrations/0001_init.sql"),
+    include_str!("../../../migrations/0002_relationship_attributes.sql"),
+];
 
 pub const SCHEMA_VERSION: u32 = MIGRATIONS.len() as u32;
 
@@ -162,7 +165,7 @@ impl Store {
         // Remote projects are shared between scans (a Git remote and a Homebrew
         // homepage can name the same project). Keep them while anything links to them.
         tx.execute(
-            "DELETE FROM entities WHERE kind = 'remote_project'
+            "DELETE FROM entities WHERE kind IN ('remote_project', 'dependency')
              AND id NOT IN (SELECT from_id FROM relationships UNION SELECT to_id FROM relationships)",
             [],
         )?;
@@ -276,7 +279,7 @@ impl Store {
     pub fn recent_entities(&self, limit: u32) -> CoreResult<Vec<Entity>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, kind, name, path, version, source, attributes, first_seen, last_seen
-             FROM entities WHERE kind <> 'remote_project'
+             FROM entities WHERE kind NOT IN ('remote_project', 'dependency')
              ORDER BY first_seen DESC, name COLLATE NOCASE LIMIT ?1",
         )?;
         let rows = stmt.query_map([limit], entity_from_row)?;
@@ -342,7 +345,7 @@ impl Store {
         };
         let sql = format!(
             "SELECT r.id, r.kind, r.from_id, r.to_id, r.confidence,
-                    o.id, o.kind, o.name, o.path
+                    o.id, o.kind, o.name, o.path, r.attributes
              FROM relationships r LEFT JOIN entities o ON o.id = r.{other}
              WHERE r.{mine} = ?1 ORDER BY r.kind, o.name"
         );
@@ -366,11 +369,12 @@ impl Store {
                 r.get::<_, String>(3)?,
                 r.get::<_, String>(4)?,
                 other,
+                r.get::<_, String>(9)?,
             ))
         })?;
         let mut out = Vec::new();
         for row in rows {
-            let (rid, kind, from_id, to_id, confidence, other) = row?;
+            let (rid, kind, from_id, to_id, confidence, other, attrs) = row?;
             let Some(kind) = RelationKind::parse(&kind) else {
                 continue;
             };
@@ -381,6 +385,7 @@ impl Store {
                 from_id,
                 to_id,
                 confidence: Confidence::parse(&confidence),
+                attributes: serde_json::from_str(&attrs).unwrap_or(serde_json::Value::Null),
                 evidence,
                 other,
             });
@@ -428,6 +433,97 @@ impl Store {
             params![kind.as_str(), json_path, v],
             |r| r.get(0),
         )?)
+    }
+
+    // ----- graph queries -----
+
+    /// Lightweight edges (no evidence) touching `id`, in either direction.
+    pub fn edges_touching(&self, id: &str) -> CoreResult<Vec<Edge>> {
+        self.query_edges(
+            "SELECT id, kind, from_id, to_id, confidence, attributes FROM relationships
+             WHERE from_id = ?1 OR to_id = ?1",
+            params![id],
+        )
+    }
+
+    /// Edges whose endpoints are both in `ids`.
+    pub fn edges_among(&self, ids: &[String]) -> CoreResult<Vec<Edge>> {
+        let json = serde_json::to_string(ids)?;
+        self.query_edges(
+            "SELECT id, kind, from_id, to_id, confidence, attributes FROM relationships
+             WHERE from_id IN (SELECT value FROM json_each(?1))
+               AND to_id IN (SELECT value FROM json_each(?1))",
+            params![json],
+        )
+    }
+
+    /// Edges of the given kinds, optionally limited to those ending at `to_id`.
+    pub fn edges_of_kind(&self, kind: RelationKind, to_id: Option<&str>) -> CoreResult<Vec<Edge>> {
+        self.query_edges(
+            "SELECT id, kind, from_id, to_id, confidence, attributes FROM relationships
+             WHERE kind = ?1 AND (?2 IS NULL OR to_id = ?2)",
+            params![kind.as_str(), to_id],
+        )
+    }
+
+    fn query_edges(&self, sql: &str, p: impl rusqlite::Params) -> CoreResult<Vec<Edge>> {
+        let mut stmt = self.conn.prepare(sql)?;
+        let rows = stmt.query_map(p, |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, String>(4)?,
+                r.get::<_, String>(5)?,
+            ))
+        })?;
+        let mut out = Vec::new();
+        for row in rows {
+            let (id, kind, from_id, to_id, conf, attrs) = row?;
+            let Some(kind) = RelationKind::parse(&kind) else {
+                continue;
+            };
+            out.push(Edge {
+                id,
+                kind,
+                from_id,
+                to_id,
+                confidence: Confidence::parse(&conf),
+                attributes: serde_json::from_str(&attrs).unwrap_or(serde_json::Value::Null),
+            });
+        }
+        Ok(out)
+    }
+
+    pub fn entities_by_ids(&self, ids: &[String]) -> CoreResult<Vec<Entity>> {
+        let json = serde_json::to_string(ids)?;
+        let mut stmt = self.conn.prepare(
+            "SELECT id, kind, name, path, version, source, attributes, first_seen, last_seen
+             FROM entities WHERE id IN (SELECT value FROM json_each(?1))",
+        )?;
+        let rows = stmt.query_map([json], entity_from_row)?;
+        let mut out = Vec::new();
+        for r in rows {
+            out.push(r??);
+        }
+        Ok(out)
+    }
+
+    /// Targets with the most incoming edges of `kind`, e.g. the most shared dependencies.
+    pub fn most_referenced(
+        &self,
+        kind: RelationKind,
+        limit: u32,
+    ) -> CoreResult<Vec<(String, u32)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT to_id, count(*) AS n FROM relationships WHERE kind = ?1
+             GROUP BY to_id ORDER BY n DESC, to_id LIMIT ?2",
+        )?;
+        let rows = stmt.query_map(params![kind.as_str(), limit], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
 
     // ----- scan roots -----
@@ -566,6 +662,8 @@ fn scan_relationship_kinds(kind: ScanKind) -> &'static [RelationKind] {
             RelationKind::OriginRemote,
             RelationKind::TracksRemote,
             RelationKind::DuplicateClone,
+            RelationKind::DependsOn,
+            RelationKind::RequiresRuntime,
         ],
         ScanKind::Software => &[RelationKind::InstalledBy],
         ScanKind::Packages => &[
@@ -632,10 +730,12 @@ fn upsert_relationship(
 ) -> CoreResult<()> {
     let id = r.id();
     tx.execute(
-        "INSERT INTO relationships (id, kind, from_id, to_id, confidence, last_seen, last_scan_id)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+        "INSERT INTO relationships
+             (id, kind, from_id, to_id, confidence, last_seen, last_scan_id, attributes)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
          ON CONFLICT(id) DO UPDATE SET confidence = excluded.confidence,
-             last_seen = excluded.last_seen, last_scan_id = excluded.last_scan_id",
+             last_seen = excluded.last_seen, last_scan_id = excluded.last_scan_id,
+             attributes = excluded.attributes",
         params![
             id,
             r.kind.as_str(),
@@ -643,7 +743,8 @@ fn upsert_relationship(
             r.to_id,
             r.confidence.as_str(),
             now,
-            scan_id
+            scan_id,
+            serde_json::to_string(&r.attributes)?
         ],
     )?;
     tx.execute("DELETE FROM evidence WHERE relationship_id = ?1", [&id])?;
@@ -773,6 +874,36 @@ mod tests {
     }
 
     #[test]
+    fn upgrades_a_v1_database_in_place() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v1.db");
+        {
+            let c = Connection::open(&path).unwrap();
+            c.execute_batch(MIGRATIONS[0]).unwrap();
+            c.pragma_update(None, "user_version", 1).unwrap();
+            c.execute(
+                "INSERT INTO entities (id, kind, name, source, first_seen, last_seen)
+                 VALUES ('repository:/a', 'repository', 'a', 'git', 1, 1),
+                        ('remote:x/y/z', 'remote_project', 'y/z', 'git', 1, 1)",
+                [],
+            )
+            .unwrap();
+            c.execute(
+                "INSERT INTO relationships (id, kind, from_id, to_id, confidence, last_seen)
+                 VALUES ('r1', 'origin_remote', 'repository:/a', 'remote:x/y/z', 'verified', 1)",
+                [],
+            )
+            .unwrap();
+        }
+        let s = Store::open(&path).unwrap();
+        assert_eq!(s.schema_version().unwrap(), SCHEMA_VERSION);
+        let d = s.entity_detail("repository:/a").unwrap().unwrap();
+        assert_eq!(d.outgoing.len(), 1, "existing rows survive the migration");
+        assert_eq!(d.outgoing[0].attributes, serde_json::Value::Null);
+        assert_eq!(s.edges_touching("repository:/a").unwrap().len(), 1);
+    }
+
+    #[test]
     fn rejects_newer_schema() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("b.db");
@@ -811,6 +942,7 @@ mod tests {
             "git",
         ));
         batch.relationships.push(RelationshipInput {
+            attributes: serde_json::Value::Null,
             from_id: "repository:/tmp/alpha".into(),
             to_id: "remote:github.com/o/alpha".into(),
             kind: RelationKind::OriginRemote,

@@ -30,6 +30,10 @@ pub struct RepositoryAttrs {
     pub size_bytes: Availability<u64>,
     /// Number of local clones sharing `primary_remote` (including this one).
     pub clones_of_same_remote: u32,
+    /// Distinct external dependencies declared across the project's manifests.
+    pub dependency_count: u32,
+    /// Runtime families the project declares or implies (`node`, `python`, …).
+    pub runtime_requirements: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -110,6 +114,8 @@ pub struct BinaryAttrs {
     /// First match in AGASTHY's search order. A terminal with a different
     /// `PATH` may resolve a different copy.
     pub active: bool,
+    /// Position in resolution order among copies of this tool (0 = active).
+    pub rank: u32,
     pub shadowed_by: Option<String>,
     pub version: Availability<String>,
     pub version_command: Option<String>,
@@ -167,4 +173,41 @@ pub struct PackageManagerAttrs {
     pub state: ManagerState,
     pub package_count: Option<u32>,
     pub inventory_command: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct DependencyAttrs {
+    /// `npm`, `cargo`, `pypi` or `go`.
+    pub ecosystem: String,
+    pub package: String,
+}
+
+/// One place a project declares a dependency or runtime requirement.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Declaration {
+    /// Path of the manifest relative to the repository root.
+    pub manifest: String,
+    /// The constraint as written, e.g. `^18.2.0`, `>=3.10`. `None` when the
+    /// requirement is only implied (e.g. a `package.json` with no `engines`).
+    pub constraint: Option<String>,
+    /// `runtime`, `dev`, `build`, `optional`, `peer`, or for runtimes the field name.
+    pub scope: String,
+    /// Version pinned by a lockfile, when one was read.
+    pub resolved: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct DependsOnAttrs {
+    pub declarations: Vec<Declaration>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RequiresRuntimeAttrs {
+    /// Runtime family: `node`, `python`, `rust`, `go`, `ruby`.
+    pub runtime: String,
+    pub declarations: Vec<Declaration>,
 }

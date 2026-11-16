@@ -1,5 +1,6 @@
 import type {
   BinaryAttrs,
+  DependencyAttrs,
   Entity,
   EntityKind,
   InstalledApp,
@@ -11,9 +12,10 @@ import type {
 import { Badge, Button, StateView, cn } from "@agasthy/ui";
 import { useQueries } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, FolderPlus, RefreshCw, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, FolderPlus, Network, RefreshCw, Search, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Avail } from "../components/availability";
+import { RuntimeImpact } from "../components/impact";
 import { PageHeader } from "../components/page";
 import { progressLabel, useScanActivity } from "../components/scan-activity";
 import { formatBytes, formatNumber, formatRelative, shortenHome, value } from "../lib/format";
@@ -21,7 +23,7 @@ import { api, errorMessage } from "../lib/ipc";
 import { keys, useOverview } from "../lib/queries";
 import { EntityDetailPanel } from "./entity-detail";
 
-export type DiscoveryTab = "repositories" | "applications" | "tools" | "packages" | "managers";
+export type DiscoveryTab = "repositories" | "applications" | "tools" | "packages" | "managers" | "dependencies";
 
 export const TABS: { id: DiscoveryTab; label: string; kinds: EntityKind[]; scan: ScanKind }[] = [
   { id: "repositories", label: "Repositories", kinds: ["repository"], scan: "repositories" },
@@ -29,6 +31,7 @@ export const TABS: { id: DiscoveryTab; label: string; kinds: EntityKind[]; scan:
   { id: "tools", label: "CLI tools & runtimes", kinds: ["runtime", "binary"], scan: "software" },
   { id: "packages", label: "Packages", kinds: ["package"], scan: "packages" },
   { id: "managers", label: "Package managers", kinds: ["package_manager"], scan: "packages" },
+  { id: "dependencies", label: "Project dependencies", kinds: ["dependency"], scan: "repositories" },
 ];
 
 /** What each entity kind *is*. Provenance classes are never merged. */
@@ -40,6 +43,7 @@ export const KIND_LABEL: Record<EntityKind, { short: string; provenance: string 
   runtime: { short: "Runtime", provenance: "Language runtime found on PATH" },
   package: { short: "Package", provenance: "Installed through a package manager" },
   package_manager: { short: "Manager", provenance: "Package manager whose inventory AGASTHY read" },
+  dependency: { short: "Dependency", provenance: "Declared in a project manifest (not necessarily installed)" },
 };
 
 export function tabForKind(kind: EntityKind): DiscoveryTab {
@@ -176,6 +180,10 @@ const COLUMNS: Record<DiscoveryTab, Column[]> = {
     },
     { id: "desc", header: "Description", cell: (e) => <span className="text-muted">{attrs<PackageAttrs>(e).description ?? ""}</span> },
   ],
+  dependencies: [
+    { id: "name", header: "Dependency", cell: (e) => <span className="font-medium text-fg">{e.name}</span>, sort: (e) => e.name.toLowerCase() },
+    { id: "eco", header: "Ecosystem", cell: (e) => <span className="text-muted">{attrs<DependencyAttrs>(e).ecosystem}</span>, sort: (e) => attrs<DependencyAttrs>(e).ecosystem },
+  ],
   managers: [
     { id: "name", header: "Package manager", cell: (e) => <span className="font-medium text-fg">{e.name}</span>, sort: (e) => e.name.toLowerCase() },
     {
@@ -236,6 +244,10 @@ function filtersFor(tab: DiscoveryTab, rows: Entity[]): Filter[] {
     }
     case "managers":
       return [all, { id: "read", label: "Read", test: (e) => attrs<PackageManagerAttrs>(e).state.state === "read" }];
+    case "dependencies": {
+      const ecos = [...new Set(rows.map((e) => attrs<DependencyAttrs>(e).ecosystem))].sort();
+      return [all, ...ecos.map((x) => ({ id: x, label: x, test: (e: Entity) => attrs<DependencyAttrs>(e).ecosystem === x }))];
+    }
   }
 }
 
@@ -423,6 +435,23 @@ export function DiscoveryPage() {
             id={selected}
             onClose={() => void nav({ search: (s) => ({ ...s, id: undefined }) })}
             onNavigate={(id, kind) => void nav({ search: { tab: tabForKind(kind), id } })}
+            actions={
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => void nav({ to: "/graph", search: { view: "focus", focus: selected, depth: 1, sel: selected } })}
+              >
+                <Network aria-hidden /> Open in graph
+              </Button>
+            }
+            extra={(entity) =>
+              entity.kind === "runtime" ? (
+                <section className="flex flex-col gap-2">
+                  <h3 className="text-[11px] font-medium uppercase tracking-[0.07em] text-faint">What if this were removed?</h3>
+                  <RuntimeImpact id={entity.id} onSelectProject={(id) => void nav({ search: { tab: "repositories", id } })} />
+                </section>
+              ) : null
+            }
           />
         ) : null}
       </div>
@@ -465,6 +494,7 @@ function EmptyTab({ tab, scanned, query, running, roots, onScan }: { tab: Discov
     tools: "None of the catalogued tools were found on PATH",
     packages: "No packages were reported by the package managers that could be read",
     managers: "No package managers were checked",
+    dependencies: "None of the scanned repositories declare dependencies in a supported manifest",
   };
   return <StateView kind="empty" title={what[tab]} description="See Settings → Scan history for any issues reported during the scan." />;
 }

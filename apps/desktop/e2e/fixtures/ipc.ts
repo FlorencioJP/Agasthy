@@ -92,7 +92,56 @@ export async function installFixtureIpc(page: Page): Promise<void> {
         incoming: [],
       },
     };
+    const runtime = {
+      id: "runtime:/fixture/bin/node",
+      kind: "runtime",
+      name: "Node.js",
+      path: "/fixture/bin/node",
+      version: "22.0.0",
+      source: "path",
+      attributes: { tool: "node", display_name: "Node.js", category: "runtime", active: true, rank: 0, version: avail("22.0.0") },
+      first_seen: now,
+      last_seen: now,
+    };
+    const graphView = {
+      nodes: [
+        { id: repo.id, kind: "repository", name: "fixture-widget", detail: "TypeScript" },
+        { id: runtime.id, kind: "runtime", name: "Node.js", detail: "22.0.0" },
+        { id: "dependency:npm:fixture-lib", kind: "dependency", name: "fixture-lib", detail: "npm" },
+      ],
+      edges: [
+        { id: "e1", kind: "requires_runtime", from_id: repo.id, to_id: runtime.id, confidence: "verified", attributes: null },
+        { id: "e2", kind: "depends_on", from_id: repo.id, to_id: "dependency:npm:fixture-lib", confidence: "verified", attributes: null },
+      ],
+      truncated: false,
+      center: null,
+    };
+    responses.graph_overview = graphView;
+    responses.graph_neighborhood = { ...graphView, center: repo.id };
+    responses.shared_dependencies = [];
+    responses.runtime_impact = {
+      target: { id: runtime.id, path: "/fixture/bin/node", version: "22.0.0", active: true, rank: 0 },
+      runtime: "node",
+      other_copies: [],
+      items: [
+        {
+          project: { id: repo.id, kind: "repository", name: "fixture-widget", path: repo.path },
+          requirements: ["package.json: >=20"],
+          outcome: "breaks",
+          explanation: "No other node is on PATH; the project could not run its node tooling.",
+          fallback: null,
+        },
+      ],
+      breaks: 1,
+      falls_back: 0,
+      unaffected: 0,
+      unknown: 0,
+      limitations: ["fixture limitation"],
+    };
     window.__AGASTHY_TEST_IPC__ = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
+      if (cmd === "entity_detail" && args?.id === runtime.id) {
+        return { entity: runtime, evidence: [], outgoing: [], incoming: [] } as T;
+      }
       if (cmd === "list_entities") {
         const q = (args?.query ?? {}) as { kind?: string | null };
         return (q.kind === "repository" || q.kind == null ? [repo] : []) as T;

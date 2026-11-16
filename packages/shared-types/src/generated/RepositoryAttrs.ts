@@ -23,4 +23,12 @@ primary_remote: RemoteRef | null, manifests: Array<string>, languages: Array<Lan
 /**
  * Number of local clones sharing `primary_remote` (including this one).
  */
-clones_of_same_remote: number, };
+clones_of_same_remote: number, 
+/**
+ * Distinct external dependencies declared across the project's manifests.
+ */
+dependency_count: number, 
+/**
+ * Runtime families the project declares or implies (`node`, `python`, …).
+ */
+runtime_requirements: Array<string>, };

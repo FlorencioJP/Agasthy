@@ -17,7 +17,11 @@ resolved_path: string | null,
  * First match in AGASTHY's search order. A terminal with a different
  * `PATH` may resolve a different copy.
  */
-active: boolean, shadowed_by: string | null, version: Availability<string>, version_command: string | null, 
+active: boolean, 
+/**
+ * Position in resolution order among copies of this tool (0 = active).
+ */
+rank: number, shadowed_by: string | null, version: Availability<string>, version_command: string | null, 
 /**
  * How the binary appears to have been installed, from its resolved path.
  */

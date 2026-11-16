@@ -18,7 +18,8 @@ test.describe("with the fixture backend", () => {
     await expect(nav.getByRole("link", { name: "Overview" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Discovery" })).toBeVisible();
     // Only implemented sections are in the sidebar.
-    await expect(nav.getByRole("link", { name: "Machine Graph" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Machine Graph" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "AI Ecosystem" })).toHaveCount(0);
 
     await expect(page.getByRole("meter", { name: "CPU" })).toHaveAttribute("aria-valuetext", "unavailable");
     await expect(page.getByRole("meter", { name: "Memory" })).toHaveAttribute("aria-valuenow", "25");
@@ -46,5 +47,18 @@ test.describe("with the fixture backend", () => {
     await page.goto("/#/privacy");
     await expect(page.getByText("AGASTHY itself makes no network requests in this build.")).toBeVisible();
     await expect(page.getByRole("list", { name: "Command allowlist" }).getByRole("listitem")).toHaveText(["git"]);
+  });
+
+  test("machine graph renders relationships and simulates runtime removal", async ({ page }) => {
+    await page.goto("/#/graph");
+    const canvas = page.getByLabel("Graph canvas");
+    await expect(canvas.getByText("fixture-widget")).toBeVisible();
+    await expect(canvas.getByText("fixture-lib")).toBeVisible();
+    await expect(page.getByText("3 nodes · 2 relationships")).toBeVisible();
+    await canvas.getByText("Node.js").click();
+    const impact = page.getByLabel("Impact analysis");
+    await expect(impact.getByText("1 would break")).toBeVisible();
+    await expect(impact.getByText("Would break", { exact: true })).toBeVisible();
+    await expect(impact.getByText("package.json: >=20")).toBeVisible();
   });
 });

@@ -16,6 +16,10 @@ const COMMANDS: &[&str] = &[
     "entity_detail",
     "list_scans",
     "list_audit",
+    "graph_neighborhood",
+    "graph_overview",
+    "runtime_impact",
+    "shared_dependencies",
 ];
 
 fn main() {

@@ -10,6 +10,8 @@ interface Activity {
   start: (kind: ScanKind) => Promise<ScanRecord | null>;
   /** Packages first, so the software scan can link binaries to packages. */
   startInventory: () => Promise<void>;
+  /** Inventory, then repositories, so projects can link to the runtimes found. */
+  startAll: () => Promise<void>;
 }
 
 const Ctx = createContext<Activity | null>(null);
@@ -64,9 +66,14 @@ export function ScanActivityProvider({ children }: { children: ReactNode }) {
     await start("software");
   }, [start]);
 
+  const startAll = useCallback(async () => {
+    await startInventory();
+    await start("repositories");
+  }, [start, startInventory]);
+
   const value = useMemo(
-    () => ({ running, progress, lastError, start, startInventory }),
-    [running, progress, lastError, start, startInventory],
+    () => ({ running, progress, lastError, start, startInventory, startAll }),
+    [running, progress, lastError, start, startInventory, startAll],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -3,8 +3,9 @@ import type { Confidence } from "./Confidence";
 import type { EntityRef } from "./EntityRef";
 import type { Evidence } from "./Evidence";
 import type { RelationKind } from "./RelationKind";
+import type { JsonValue } from "./serde_json/JsonValue";
 
-export type Relationship = { id: string, kind: RelationKind, from_id: string, to_id: string, confidence: Confidence, evidence: Array<Evidence>, 
+export type Relationship = { id: string, kind: RelationKind, from_id: string, to_id: string, confidence: Confidence, attributes: JsonValue, evidence: Array<Evidence>, 
 /**
  * The entity on the other side of the relationship, from the viewer's side.
  */

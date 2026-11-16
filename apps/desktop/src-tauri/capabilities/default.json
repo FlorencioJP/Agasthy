@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "The main window: AGASTHY's own read-only commands, the folder picker and reveal-in-file-manager. Nothing else.",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "dialog:allow-open",
@@ -20,6 +22,10 @@
     "allow-list-entities",
     "allow-entity-detail",
     "allow-list-scans",
-    "allow-list-audit"
+    "allow-list-audit",
+    "allow-graph-neighborhood",
+    "allow-graph-overview",
+    "allow-runtime-impact",
+    "allow-shared-dependencies"
   ]
 }

@@ -41,11 +41,17 @@ A box is ticked only when the item is implemented **and** verified. Anything par
 
 ## Phase 2: Intelligence graph
 
-- [ ] `graph` crate over the existing entity/relationship tables
-- [ ] Manifest and lockfile parsing (project → dependency)
-- [ ] Runtime requirements (`.nvmrc`, `engines`, `rust-toolchain`, `.python-version`, `requires-python`)
-- [ ] Graph view (React Flow), traversal, search and filters
-- [ ] "What depends on X?" queries with evidence
+- [x] `graph` crate over the existing entity/relationship tables (schema v2: relationship attributes)
+- [x] Manifest parsing: `package.json`, `Cargo.toml`, `pyproject.toml` (PEP 621, Poetry, dependency groups), `requirements.txt`, `go.mod`; nested packages in monorepos
+- [x] Resolved versions from lockfiles: `package-lock.json`, `Cargo.lock`, `uv.lock`
+- [x] Runtime requirements: `engines.node`, `.nvmrc`, `.node-version`, `requires-python`, `.python-version`, `rust-version`, `rust-toolchain(.toml)`, `go` directive, `.tool-versions`, Gemfile `ruby`; implied use marked *probable*
+- [x] Version-constraint evaluation (npm, Cargo, PEP 440, version files); unevaluable constraints reported as unknown
+- [x] Runtime impact analysis: "what breaks if I remove this runtime copy?" with PATH-order fallback, evidence and stated limitations
+- [x] Most-shared dependencies
+- [x] Machine Graph view (React Flow + dagre): Projects and Installed-software overviews, focus mode with depth and kind filters, node search, evidence and impact in the side panel
+- [ ] `pnpm-lock.yaml` and `poetry.lock` resolved versions
+- [ ] Impact analysis for packages and dependencies (not only runtimes)
+- [ ] Graph layout for very large graphs (clustering)
 
 ## Phase 3: AI ecosystem
 

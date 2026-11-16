@@ -16,7 +16,8 @@ export function OverviewPage() {
   const telemetry = useTelemetry();
   const activity = useScanActivity();
   const host = telemetry.data?.host;
-  const inventoryRunning = activity.running.has("packages") || activity.running.has("software");
+  const inventoryRunning = activity.running.size > 0;
+  const hasRoots = (overview.data?.scan_roots ?? 0) > 0;
 
   return (
     <>
@@ -30,9 +31,15 @@ export function OverviewPage() {
             : undefined
         }
         actions={
-          <Button variant="secondary" size="sm" onClick={() => void activity.startInventory()} disabled={inventoryRunning}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void (hasRoots ? activity.startAll() : activity.startInventory())}
+            disabled={inventoryRunning}
+            title={hasRoots ? "Packages, then applications and tools, then your project folders" : "Packages, then applications and tools"}
+          >
             <RefreshCw className={inventoryRunning ? "animate-spin" : ""} aria-hidden />
-            {inventoryRunning ? "Scanning…" : "Scan installed software"}
+            {inventoryRunning ? "Scanning…" : hasRoots ? "Scan everything" : "Scan installed software"}
           </Button>
         }
       />

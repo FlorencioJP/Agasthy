@@ -7,4 +7,4 @@
  * a package-manager install, a binary on `PATH` and an installed application
  * are different kinds and are never merged by name.
  */
-export type EntityKind = "repository" | "remote_project" | "application" | "binary" | "runtime" | "package" | "package_manager";
+export type EntityKind = "repository" | "remote_project" | "application" | "binary" | "runtime" | "package" | "package_manager" | "dependency";

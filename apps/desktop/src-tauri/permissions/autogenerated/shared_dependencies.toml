@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-shared-dependencies"
+description = "Enables the shared_dependencies command without any pre-configured scope."
+commands.allow = ["shared_dependencies"]
+
+[[permission]]
+identifier = "deny-shared-dependencies"
+description = "Denies the shared_dependencies command without any pre-configured scope."
+commands.deny = ["shared_dependencies"]

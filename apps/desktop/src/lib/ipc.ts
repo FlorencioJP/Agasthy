@@ -1,5 +1,6 @@
 import type {
   AppInfo,
+  EntityKind,
   AuditEntry,
   Availability,
   Entity,
@@ -7,7 +8,11 @@ import type {
   EntityQuery,
   GpuInfo,
   Overview,
+  GraphView,
+  ImpactReport,
+  OverviewKind,
   ScanEvent,
+  SharedDependency,
   ScanKind,
   ScanRecord,
   ScanRoot,
@@ -54,6 +59,11 @@ export const api = {
   entityDetail: (id: string) => invoke<EntityDetail | null>("entity_detail", { id }),
   listScans: (limit?: number) => invoke<ScanRecord[]>("list_scans", { limit }),
   listAudit: (limit?: number) => invoke<AuditEntry[]>("list_audit", { limit }),
+  graphNeighborhood: (center: string, depth: number, kinds: EntityKind[]) =>
+    invoke<GraphView>("graph_neighborhood", { center, depth, kinds }),
+  graphOverview: (kind: OverviewKind) => invoke<GraphView>("graph_overview", { kind }),
+  runtimeImpact: (id: string) => invoke<ImpactReport | null>("runtime_impact", { id }),
+  sharedDependencies: (limit?: number) => invoke<SharedDependency[]>("shared_dependencies", { limit }),
 };
 
 export async function onScanEvent(handler: (e: ScanEvent) => void): Promise<() => void> {

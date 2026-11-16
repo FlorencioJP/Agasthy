@@ -14,6 +14,7 @@ version = "0.1.0"
 dependencies = [
  "agasthy-core",
  "agasthy-discovery",
+ "agasthy-graph",
  "agasthy-platform",
  "agasthy-system-monitor",
  "serde_json",
@@ -37,6 +38,7 @@ version = "0.1.0"
 dependencies = [
  "agasthy-core",
  "agasthy-discovery",
+ "agasthy-graph",
  "agasthy-platform",
  "agasthy-system-monitor",
  "serde",
@@ -58,8 +60,19 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "toml 1.2.1+spec-1.1.0",
  "ts-rs",
  "walkdir",
+]
+
+[[package]]
+name = "agasthy-graph"
+version = "0.1.0"
+dependencies = [
+ "agasthy-core",
+ "serde",
+ "serde_json",
+ "ts-rs",
 ]
 
 [[package]]

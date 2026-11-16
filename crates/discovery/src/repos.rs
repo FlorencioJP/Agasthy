@@ -13,7 +13,11 @@ use agasthy_platform::CommandRunner;
 use agasthy_provenance::{ProvenanceSource, RemoteRef, confidence_for};
 use walkdir::WalkDir;
 
-use crate::attrs::{LanguageShare, LicenseInfo, RepositoryAttrs};
+use crate::attrs::{
+    DependencyAttrs, DependsOnAttrs, LanguageShare, LicenseInfo, RepositoryAttrs,
+    RequiresRuntimeAttrs,
+};
+use crate::manifests::{ProjectManifests, read_project};
 use crate::{ProgressFn, ScanProgress, git};
 
 /// Directory names never descended into while looking for repositories.
@@ -74,6 +78,18 @@ pub struct RepoScanOptions {
     /// Upper bound on files examined when measuring a single repository.
     pub max_files_per_repo: usize,
     pub workers: usize,
+    /// Runtime copies currently on PATH, so `requires_runtime` edges can point
+    /// at them. Empty means runtime requirements are recorded on the project
+    /// only (no edges).
+    pub runtimes: Vec<RuntimeCopy>,
+}
+
+/// A runtime executable that projects may require.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeCopy {
+    /// `node`, `python`, `rust`, `go`, `ruby`.
+    pub family: String,
+    pub entity_id: String,
 }
 
 impl RepoScanOptions {
@@ -83,6 +99,7 @@ impl RepoScanOptions {
             max_dirs_per_root: 250_000,
             max_files_per_repo: 300_000,
             workers: 6,
+            runtimes: Vec::new(),
         }
     }
 }
@@ -194,8 +211,8 @@ pub fn scan_repositories(
     let total = found.len() as u32;
     let done = AtomicU32::new(0);
     let next = AtomicUsize::new(0);
-    let results: Mutex<Vec<(FoundRepo, RepositoryAttrs, Vec<ScanIssue>)>> =
-        Mutex::new(Vec::with_capacity(found.len()));
+    type Inspected = (FoundRepo, RepositoryAttrs, Vec<ScanIssue>, ProjectManifests);
+    let results: Mutex<Vec<Inspected>> = Mutex::new(Vec::with_capacity(found.len()));
     let workers = opts.workers.clamp(1, 16).min(found.len().max(1));
     std::thread::scope(|s| {
         for _ in 0..workers {
@@ -203,8 +220,15 @@ pub fn scan_repositories(
                 loop {
                     let i = next.fetch_add(1, Ordering::SeqCst);
                     let Some(repo) = found.get(i) else { break };
-                    let (attrs, issues) = inspect_repository(repo, runner, opts.max_files_per_repo);
-                    results.lock().unwrap().push((repo.clone(), attrs, issues));
+                    let (mut attrs, issues) =
+                        inspect_repository(repo, runner, opts.max_files_per_repo);
+                    let manifests = read_project(&repo.path);
+                    attrs.dependency_count = manifests.dependencies.len() as u32;
+                    attrs.runtime_requirements = manifests.runtimes.keys().cloned().collect();
+                    results
+                        .lock()
+                        .unwrap()
+                        .push((repo.clone(), attrs, issues, manifests));
                     let d = done.fetch_add(1, Ordering::SeqCst) + 1;
                     progress(ScanProgress {
                         phase: "inspecting".into(),
@@ -221,7 +245,7 @@ pub fn scan_repositories(
 
     // Duplicate clones: normal clones (not worktrees) sharing a primary remote.
     let mut groups: BTreeMap<String, Vec<usize>> = BTreeMap::new();
-    for (i, (repo, attrs, _)) in results.iter().enumerate() {
+    for (i, (repo, attrs, _, _)) in results.iter().enumerate() {
         if let Some(r) = &attrs.primary_remote
             && !repo.git_is_file
         {
@@ -236,8 +260,92 @@ pub fn scan_repositories(
     }
 
     let mut remotes: HashMap<String, RemoteRef> = HashMap::new();
-    for (repo, attrs, issues) in &results {
+    let mut dependencies: BTreeMap<String, (String, String)> = BTreeMap::new();
+    for (repo, attrs, issues, manifests) in &results {
         batch.issues.extend(issues.iter().cloned());
+        let rid = repo_id(&repo.path);
+        for (rel, err) in &manifests.errors {
+            batch.issues.push(ScanIssue::new(
+                IssueKind::ParseError,
+                repo.path.join(rel).display().to_string(),
+                format!("manifest not parsed: {err}"),
+            ));
+        }
+        for ((eco, name), decls) in &manifests.dependencies {
+            let dep_id = format!("dependency:{eco}:{name}");
+            dependencies
+                .entry(dep_id.clone())
+                .or_insert_with(|| (eco.clone(), name.clone()));
+            batch.relationships.push(RelationshipInput {
+                from_id: rid.clone(),
+                to_id: dep_id,
+                kind: RelationKind::DependsOn,
+                confidence: Confidence::Verified,
+                attributes: serde_json::to_value(DependsOnAttrs {
+                    declarations: decls.clone(),
+                })
+                .unwrap_or_default(),
+                evidence: decls
+                    .iter()
+                    .map(|d| {
+                        EvidenceInput::new(
+                            "manifest_declaration",
+                            format!(
+                                "{} declares `{name}` {} ({})",
+                                d.manifest,
+                                d.constraint.as_deref().unwrap_or("(any version)"),
+                                d.scope
+                            ),
+                            repo.path.join(&d.manifest).display().to_string(),
+                            Confidence::Verified,
+                        )
+                    })
+                    .collect(),
+            });
+        }
+        for (family, decls) in &manifests.runtimes {
+            // Explicit version constraints are stated; a bare manifest only implies use.
+            let explicit = decls.iter().any(|d| d.constraint.is_some());
+            let confidence = if explicit {
+                Confidence::Verified
+            } else {
+                Confidence::Probable
+            };
+            for copy in opts.runtimes.iter().filter(|c| &c.family == family) {
+                batch.relationships.push(RelationshipInput {
+                    from_id: rid.clone(),
+                    to_id: copy.entity_id.clone(),
+                    kind: RelationKind::RequiresRuntime,
+                    confidence,
+                    attributes: serde_json::to_value(RequiresRuntimeAttrs {
+                        runtime: family.clone(),
+                        declarations: decls.clone(),
+                    })
+                    .unwrap_or_default(),
+                    evidence: decls
+                        .iter()
+                        .map(|d| {
+                            EvidenceInput::new(
+                                "runtime_requirement",
+                                match &d.constraint {
+                                    Some(c) => format!(
+                                        "{} requires {family} {c} ({})",
+                                        d.manifest, d.scope
+                                    ),
+                                    None => format!("{}: {family} {}", d.manifest, d.scope),
+                                },
+                                repo.path.join(&d.manifest).display().to_string(),
+                                if d.constraint.is_some() {
+                                    Confidence::Verified
+                                } else {
+                                    Confidence::Probable
+                                },
+                            )
+                        })
+                        .collect(),
+                });
+            }
+        }
         let id = repo_id(&repo.path);
         for remote in &attrs.remotes {
             let Some(parsed) = &remote.parsed else {
@@ -252,6 +360,7 @@ pub fn scan_repositories(
                 RelationKind::TracksRemote
             };
             batch.relationships.push(RelationshipInput {
+                attributes: serde_json::Value::Null,
                 from_id: id.clone(),
                 to_id: parsed.entity_id(),
                 kind,
@@ -327,6 +436,7 @@ pub fn scan_repositories(
         for &i in &idxs[1..] {
             let other = &results[i].0.path;
             batch.relationships.push(RelationshipInput {
+                attributes: serde_json::Value::Null,
                 from_id: repo_id(other),
                 to_id: repo_id(first),
                 kind: RelationKind::DuplicateClone,
@@ -339,6 +449,23 @@ pub fn scan_repositories(
                 )],
             });
         }
+    }
+
+    for (id, (eco, name)) in dependencies {
+        batch.entities.push(EntityInput {
+            id,
+            kind: EntityKind::Dependency,
+            name: name.clone(),
+            path: None,
+            version: None,
+            source: "manifest".into(),
+            attributes: serde_json::to_value(DependencyAttrs {
+                ecosystem: eco,
+                package: name,
+            })
+            .unwrap_or_default(),
+            evidence: vec![],
+        });
     }
 
     for (id, r) in remotes {
@@ -430,6 +557,8 @@ pub fn inspect_repository(
             license,
             size_bytes,
             clones_of_same_remote: 1,
+            dependency_count: 0,
+            runtime_requirements: Vec::new(),
         },
         issues,
     )
