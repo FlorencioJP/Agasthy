@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-16
+
+First public release (Apple silicon, macOS 12+). Everything below is included.
+
 ### Added (release readiness)
 - In-app updates from GitHub Releases: signature-verified, installed only after confirmation, start-up check can be turned off.
 - Release workflow (`.github/workflows/release.yml`) producing a draft GitHub release with the DMG and updater manifest.
