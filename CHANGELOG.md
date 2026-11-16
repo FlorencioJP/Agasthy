@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-17
+
+- **MCP server:** `agasthy mcp` serves nine read-only tools (status, find, entity, impact, shared_dependencies, agents, processes, token_usage, telemetry) over stdio for Claude Desktop, Claude Code, Cursor, VS Code, Codex and any MCP client. Setup: `integrations/mcp`.
+- **One-step agent install:** a Claude Code and Codex plugin (skill + MCP server) from this repo's marketplace (`/plugin marketplace add HMAKT99/Agasthy`); the skill now lives in `skills/agasthy` so `npx skills add HMAKT99/Agasthy` finds it; `llms.txt` tells any agent how to install and use AGASTHY.
+- The command line and the MCP server share one set of queries, so they always give the same answers.
+
 ## [0.1.4] - 2026-11-17
 
 - **AGASTHY skill for coding agents** (`integrations/agent-skill`): OpenClaw, Hermes, Claude Code and other Agent Skills readers can answer questions about your machine from AGASTHY's data. Read-only; changes stay with you.

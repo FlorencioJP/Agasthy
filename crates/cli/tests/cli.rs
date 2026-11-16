@@ -112,3 +112,107 @@ fn clear_errors_for_bad_input() {
     assert!(!ok);
     assert!(err.contains("unknown kind"), "{err}");
 }
+
+/// Send newline-delimited JSON-RPC messages to `agasthy mcp` and collect the replies.
+fn mcp_session(db: &str, messages: &[serde_json::Value]) -> Vec<serde_json::Value> {
+    use std::io::Write;
+    let mut child = Command::new(env!("CARGO_BIN_EXE_agasthy"))
+        .args(["mcp", "--db", db])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("start agasthy mcp");
+    {
+        let mut stdin = child.stdin.take().unwrap();
+        for m in messages {
+            writeln!(stdin, "{m}").unwrap();
+        }
+        writeln!(stdin, "this is not json").unwrap();
+    }
+    let out = child.wait_with_output().unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8(out.stdout)
+        .unwrap()
+        .lines()
+        .map(json)
+        .collect()
+}
+
+#[test]
+fn mcp_server_speaks_the_protocol_and_only_reads() {
+    let dir = tempfile::tempdir_in(env!("CARGO_TARGET_TMPDIR")).unwrap();
+    let db = dir.path().join("agasthy.db");
+    drop(agasthy_core::Store::open(&db).unwrap());
+    let before = std::fs::read(&db).unwrap();
+    let db = db.to_str().unwrap();
+    let m = |id: u32, method: &str, params: serde_json::Value| serde_json::json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params});
+    let replies = mcp_session(
+        db,
+        &[
+            m(
+                1,
+                "initialize",
+                serde_json::json!({"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}),
+            ),
+            serde_json::json!({"jsonrpc": "2.0", "method": "notifications/initialized"}),
+            m(2, "tools/list", serde_json::json!({})),
+            m(
+                3,
+                "tools/call",
+                serde_json::json!({"name": "status", "arguments": {}}),
+            ),
+            m(
+                4,
+                "tools/call",
+                serde_json::json!({"name": "find", "arguments": {"kind": "bogus"}}),
+            ),
+            m(5, "tools/call", serde_json::json!({"name": "no_such_tool"})),
+            m(6, "resources/list", serde_json::json!({})),
+            m(
+                7,
+                "initialize",
+                serde_json::json!({"protocolVersion": "1999-01-01"}),
+            ),
+        ],
+    );
+    // The notification gets no reply; the bad line gets a parse error.
+    assert_eq!(replies.len(), 8, "{replies:#?}");
+    let by_id = |id: u32| replies.iter().find(|r| r["id"] == id).unwrap();
+
+    assert_eq!(by_id(1)["result"]["protocolVersion"], "2025-06-18");
+    assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "agasthy");
+    assert_eq!(
+        by_id(7)["result"]["protocolVersion"],
+        "2025-11-25",
+        "unknown version: offer the newest"
+    );
+
+    let tools = by_id(2)["result"]["tools"].as_array().unwrap();
+    assert!(tools.len() >= 9);
+    for t in tools {
+        assert_eq!(t["annotations"]["readOnlyHint"], true, "{}", t["name"]);
+        assert_eq!(t["annotations"]["destructiveHint"], false, "{}", t["name"]);
+        assert_eq!(t["inputSchema"]["type"], "object", "{}", t["name"]);
+    }
+
+    let status = &by_id(3)["result"];
+    assert_eq!(status["isError"], false);
+    let body = json(status["content"][0]["text"].as_str().unwrap());
+    assert!(body["last_scans"].is_array());
+
+    assert_eq!(by_id(4)["result"]["isError"], true);
+    assert_eq!(by_id(5)["error"]["code"], -32602);
+    assert_eq!(by_id(6)["error"]["code"], -32601);
+    assert!(replies.iter().any(|r| r["error"]["code"] == -32700));
+
+    assert_eq!(
+        before,
+        std::fs::read(db).unwrap(),
+        "the MCP server must not write"
+    );
+}

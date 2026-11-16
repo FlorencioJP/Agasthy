@@ -171,6 +171,29 @@ jobs:
           agasthy status --db "$db"
           id=$(agasthy find demo-app --kind repository --db "$db" | "$py" -c "import json,sys; d=json.load(sys.stdin); assert d['count']==1, d; print(d['entities'][0]['id'])")
           agasthy entity "$id" --db "$db" | "$py" -c "import json,sys; d=json.load(sys.stdin); w=d['entity']['attributes']['working_tree']['value']; assert w['untracked']==1, w; print('uncommitted work found:', w)"
+      - name: MCP server answers like a client expects
+        run: |
+          py=$(command -v python3 || command -v python)
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}' \
+            '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+            '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"find","arguments":{"text":"demo-app","kind":"repository"}}}' \
+            '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"agents","arguments":{}}}' \
+            | agasthy mcp --db "$HOME/agasthy-smoke/agasthy.db" > mcp.out
+          cat mcp.out | head -c 1500; echo
+          "$py" - <<'PY'
+          import json
+          r = {m["id"]: m for m in map(json.loads, open("mcp.out"))}
+          assert r[1]["result"]["serverInfo"]["name"] == "agasthy", r[1]
+          tools = r[2]["result"]["tools"]
+          assert len(tools) >= 9 and all(t["annotations"]["readOnlyHint"] for t in tools), tools
+          found = json.loads(r[3]["result"]["content"][0]["text"])
+          assert found["count"] == 1, found
+          assert r[4]["result"]["isError"] is False, r[4]
+          print("MCP OK:", len(tools), "read-only tools")
+          PY
+
       - name: Live commands run cleanly
         run: |
           py=$(command -v python3 || command -v python)

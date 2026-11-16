@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "agasthy": {
+      "command": "agasthy",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}

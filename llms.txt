@@ -1,0 +1,39 @@
+# AGASTHY
+
+> AGASTHY is a free, open-source (Apache-2.0), local-first desktop app that maps a developer machine: Git repositories and their uncommitted work, runtimes and which copy is active, packages from Homebrew, npm, pip and others, AI tools, MCP servers and coding agents, linked in one knowledge graph. It shows what breaks before you remove something, which processes and ports belong to which project, token usage per coding-agent session, and frees disk space through a restorable quarantine. No account, no telemetry. macOS (Apple silicon) first; Windows and Linux previews.
+
+Agents can use AGASTHY through `agasthy`, a read-only command-line tool that also runs as an MCP server (`agasthy mcp`). It never changes the machine. Every change (stopping processes, uninstalling, cleanup) happens in the AGASTHY app, behind a dry-run review the user confirms.
+
+## Install AGASTHY for the user
+
+Ask before installing anything. Then:
+
+1. Desktop app (needed for scanned data): download from https://github.com/HMAKT99/Agasthy/releases/latest
+   - macOS (Apple silicon): `AGASTHY-<version>-apple-silicon.dmg`. On first launch macOS says it cannot verify the developer; the user allows it once in System Settings > Privacy & Security > Open Anyway.
+   - Windows (x64): `AGASTHY_<version>_x64-setup.exe`. SmartScreen warns once: More info > Run anyway.
+   - Linux (x64): `AGASTHY_<version>_amd64.AppImage` (chmod +x) or `agasthy_<version>_amd64.deb`.
+   The user opens the app and runs a scan from it.
+2. Command-line tool: download the archive for the system from the same release page, verify it against the `.sha256` file next to it, and put `agasthy` on PATH:
+   - macOS: `agasthy-cli-macos-aarch64.tar.gz`
+   - Linux: `agasthy-cli-linux-x86_64.tar.gz`
+   - Windows: `agasthy-cli-windows-x86_64.zip`
+   Example (macOS): `cd /tmp && curl -fsSLO https://github.com/HMAKT99/Agasthy/releases/latest/download/agasthy-cli-macos-aarch64.tar.gz && curl -fsSLO https://github.com/HMAKT99/Agasthy/releases/latest/download/agasthy-cli-macos-aarch64.tar.gz.sha256 && shasum -a 256 -c agasthy-cli-macos-aarch64.tar.gz.sha256 && mkdir -p ~/.local/bin && tar -C ~/.local/bin -xzf agasthy-cli-macos-aarch64.tar.gz && ~/.local/bin/agasthy --version`
+3. Connect it to the agent, one of:
+   - Claude Code plugin (skill + MCP server): `/plugin marketplace add HMAKT99/Agasthy` then `/plugin install agasthy@agasthy`
+   - Codex plugin: `codex plugin marketplace add HMAKT99/Agasthy` then `codex plugin add agasthy@agasthy`
+   - Skill only (Claude Code, Codex, Cursor and others): `npx skills add HMAKT99/Agasthy`
+   - Hermes: `hermes skills install HMAKT99/Agasthy/skills/agasthy`
+   - OpenClaw: put https://raw.githubusercontent.com/HMAKT99/Agasthy/main/skills/agasthy/SKILL.md in `~/.openclaw/skills/agasthy/SKILL.md`
+   - Any MCP client: command `agasthy`, args `["mcp"]` (use the full path if the client does not inherit PATH)
+
+## Use
+
+- [Skill](https://github.com/HMAKT99/Agasthy/blob/main/skills/agasthy/SKILL.md): when to call which command and how to read the JSON
+- [MCP server](https://github.com/HMAKT99/Agasthy/blob/main/integrations/mcp/README.md): nine read-only tools (status, find, entity, impact, shared_dependencies, agents, processes, token_usage, telemetry) and client setup
+- Start with `agasthy status` to see how fresh the scanned data is. A value with "status": "unavailable" means unknown, never zero. Token costs are estimates from API list prices.
+
+## More
+
+- [README](https://github.com/HMAKT99/Agasthy/blob/main/README.md)
+- [Privacy](https://github.com/HMAKT99/Agasthy/blob/main/docs/privacy.md)
+- [Releases](https://github.com/HMAKT99/Agasthy/releases)

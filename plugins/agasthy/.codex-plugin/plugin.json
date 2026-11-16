@@ -1,0 +1,36 @@
+{
+  "name": "agasthy",
+  "version": "0.1.5",
+  "description": "Ask your machine with real data: repositories and uncommitted work, runtimes and packages, what breaks if you remove something, live coding-agent sessions and what they left running, processes and ports, and token usage. Read-only skill plus MCP server for AGASTHY.",
+  "author": {
+    "name": "HMAKT99",
+    "url": "https://github.com/HMAKT99"
+  },
+  "homepage": "https://github.com/HMAKT99/Agasthy",
+  "repository": "https://github.com/HMAKT99/Agasthy",
+  "license": "Apache-2.0",
+  "keywords": [
+    "developer-tools",
+    "machine",
+    "coding-agents",
+    "mcp",
+    "tokens",
+    "processes",
+    "packages",
+    "read-only"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "AGASTHY",
+    "shortDescription": "Real answers about your developer machine",
+    "developerName": "HMAKT99",
+    "category": "Productivity",
+    "websiteURL": "https://github.com/HMAKT99/Agasthy",
+    "defaultPrompt": [
+      "Which of my projects have uncommitted work?",
+      "What is running on port 3000?",
+      "How many tokens did my coding agents use this week?"
+    ]
+  }
+}

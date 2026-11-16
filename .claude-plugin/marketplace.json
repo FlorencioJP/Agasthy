@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "agasthy",
+  "description": "AGASTHY for coding agents: a read-only skill and MCP server with real answers about your developer machine.",
+  "owner": {
+    "name": "HMAKT99",
+    "url": "https://github.com/HMAKT99"
+  },
+  "plugins": [
+    {
+      "name": "agasthy",
+      "description": "Ask your machine with real data: repositories and uncommitted work, runtimes and packages, what breaks if you remove something, live coding-agent sessions and what they left running, processes and ports, and token usage. Read-only skill plus MCP server for AGASTHY.",
+      "category": "productivity",
+      "source": "./plugins/agasthy",
+      "homepage": "https://github.com/HMAKT99/Agasthy"
+    }
+  ]
+}

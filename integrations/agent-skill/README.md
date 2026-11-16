@@ -12,13 +12,26 @@ The agent runs `agasthy`, AGASTHY's command-line tool, and answers from its JSON
 
 ## Install
 
-The skill is one file: [`agasthy/SKILL.md`](agasthy/SKILL.md).
+The skill is one file: [`skills/agasthy/SKILL.md`](../../skills/agasthy/SKILL.md).
+
+**Claude Code or Codex, skill and MCP server in one step** (recommended): see the [AGASTHY plugin](../../plugins/agasthy/README.md).
+
+```text
+/plugin marketplace add HMAKT99/Agasthy
+/plugin install agasthy@agasthy
+```
+
+**Any agent the `skills` CLI supports** (Claude Code, Codex, Cursor, Gemini CLI and many more):
+
+```bash
+npx skills add HMAKT99/Agasthy
+```
 
 **OpenClaw**
 
 ```bash
 mkdir -p ~/.openclaw/skills/agasthy
-curl -fsSL https://raw.githubusercontent.com/HMAKT99/Agasthy/main/integrations/agent-skill/agasthy/SKILL.md -o ~/.openclaw/skills/agasthy/SKILL.md
+curl -fsSL https://raw.githubusercontent.com/HMAKT99/Agasthy/main/skills/agasthy/SKILL.md -o ~/.openclaw/skills/agasthy/SKILL.md
 ```
 
 OpenClaw then offers to download the `agasthy` tool for your system (macOS Apple silicon, Linux x64, Windows x64).
@@ -26,14 +39,14 @@ OpenClaw then offers to download the `agasthy` tool for your system (macOS Apple
 **Hermes**
 
 ```bash
-hermes skills install HMAKT99/Agasthy/integrations/agent-skill/agasthy
+hermes skills install HMAKT99/Agasthy/skills/agasthy
 ```
 
-**Claude Code**
+**Claude Code, by hand**
 
 ```bash
 mkdir -p ~/.claude/skills/agasthy
-curl -fsSL https://raw.githubusercontent.com/HMAKT99/Agasthy/main/integrations/agent-skill/agasthy/SKILL.md -o ~/.claude/skills/agasthy/SKILL.md
+curl -fsSL https://raw.githubusercontent.com/HMAKT99/Agasthy/main/skills/agasthy/SKILL.md -o ~/.claude/skills/agasthy/SKILL.md
 ```
 
 For Hermes, Claude Code and others, install the `agasthy` tool yourself: download `agasthy-cli-<system>` from the [latest release](https://github.com/HMAKT99/Agasthy/releases/latest), check it against the `.sha256` file next to it, unpack it, and put `agasthy` on your PATH. On macOS:
@@ -45,6 +58,10 @@ cd /tmp && curl -fsSLO https://github.com/HMAKT99/Agasthy/releases/latest/downlo
   && mkdir -p ~/.local/bin && tar -C ~/.local/bin -xzf agasthy-cli-macos-aarch64.tar.gz \
   && ~/.local/bin/agasthy --version
 ```
+
+## Using MCP instead
+
+If your agent speaks MCP, `agasthy mcp` exposes the same answers as a read-only MCP server: see [../mcp](../mcp).
 
 ## The command-line tool
 

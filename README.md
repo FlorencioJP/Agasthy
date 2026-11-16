@@ -66,11 +66,23 @@ A developer machine holds hundreds of moving parts: cloned repositories, several
 
 Your agent can ask AGASTHY too. The **AGASTHY skill** gives OpenClaw, Hermes, Claude Code and other agents that read [Agent Skills](https://agentskills.io) real answers about your machine: which projects have uncommitted work, what is on port 3000, what your agents spent in tokens this week, and what breaks if a package goes.
 
-```bash
-hermes skills install HMAKT99/Agasthy/integrations/agent-skill/agasthy
+```text
+/plugin marketplace add HMAKT99/Agasthy        # Claude Code: skill + MCP server
+npx skills add HMAKT99/Agasthy                 # Codex, Cursor, Gemini CLI and more
+hermes skills install HMAKT99/Agasthy/skills/agasthy
 ```
 
+Or point your agent at [`llms.txt`](llms.txt): *"Install AGASTHY for me by reading https://raw.githubusercontent.com/HMAKT99/Agasthy/main/llms.txt"*.
+
 It runs `agasthy`, the read-only command-line tool attached to each release, and leaves every change to you. Setup for each agent: [integrations/agent-skill](integrations/agent-skill).
+
+**Prefer MCP?** `agasthy mcp` is a read-only MCP server with nine tools (status, find, entity, impact, shared dependencies, agents, processes, token usage, telemetry) for Claude Desktop, Claude Code, Cursor, VS Code, Codex and any other MCP client:
+
+```bash
+claude mcp add agasthy -- ~/.local/bin/agasthy mcp
+```
+
+Setup for each client: [integrations/mcp](integrations/mcp).
 
 ## Install
 
