@@ -5,7 +5,9 @@
 //! `crates/` workspace members.
 
 mod agents;
+mod background;
 mod commands;
+mod insights;
 mod intel;
 mod operator;
 mod ops;
@@ -28,8 +30,21 @@ pub fn run() {
                 .map_err(|e| format!("could not resolve the app data directory: {e}"))?;
             let state = state::AppState::open(data_dir)?;
             agents::start_sampler(state.0.clone());
+            background::start_scheduler(app.handle().clone(), state.0.clone());
+            if let Err(e) = background::build_tray(app.handle(), state.0.clone()) {
+                eprintln!("menu bar item unavailable: {e}");
+            }
             app.manage(state);
             Ok(())
+        })
+        // The menu-bar item keeps running when the window is closed; Quit is in its menu.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event
+                && window.app_handle().tray_by_id("agasthy").is_some()
+            {
+                let _ = window.hide();
+                api.prevent_close();
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::app_info,
@@ -74,7 +89,18 @@ pub fn run() {
             operator::operator_delete_key,
             operator::operator_set_cloud_consent,
             operator::operator_ask,
+            insights::insights,
+            background::scan_schedule,
+            background::set_auto_refresh,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running AGASTHY");
+        .build(tauri::generate_context!())
+        .expect("error while building AGASTHY")
+        .run(|app, event| {
+            // Clicking the Dock icon brings the hidden window back.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = event {
+                background::show_main(app, None);
+            }
+            let _ = (app, event);
+        });
 }

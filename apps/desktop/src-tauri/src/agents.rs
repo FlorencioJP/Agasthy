@@ -33,11 +33,28 @@ pub fn sample(inner: &Inner) -> CmdResult<AgentReport> {
         .lock()
         .map_err(|_| "process monitor lock poisoned")?
         .snapshot(&inner.runner, &repos);
-    Ok(inner
+    let report = inner
         .agents
         .lock()
         .map_err(|_| "agent tracker lock poisoned")?
-        .update(&snap))
+        .update(&snap);
+    if let Ok(mut last) = inner.last_agents.lock() {
+        *last = Some(report.clone());
+    }
+    Ok(report)
+}
+
+/// The most recent agent report (at most one sampler interval old), or a fresh one.
+pub fn latest(inner: &Inner) -> CmdResult<AgentReport> {
+    if let Some(r) = inner
+        .last_agents
+        .lock()
+        .map_err(|_| "lock poisoned")?
+        .clone()
+    {
+        return Ok(r);
+    }
+    sample(inner)
 }
 
 /// Start the background sampler (a plain thread; it only reads).

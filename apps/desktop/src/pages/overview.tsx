@@ -1,6 +1,7 @@
 import type { DiskSample, Entity, EntityKind, KindCount, ProcessSample, ScanKind, ScanRecord, TelemetrySnapshot } from "@agasthy/shared-types";
 import { Badge, Button, Meter, StateView } from "@agasthy/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { InsightsPanel } from "../components/insights-panel";
 import { ArrowRight, FolderPlus, RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { Avail } from "../components/availability";
@@ -44,6 +45,7 @@ export function OverviewPage() {
         }
       />
       <div className="flex flex-col gap-4 p-5">
+        <InsightsPanel />
         <ResourcesPanel telemetry={telemetry.data} error={telemetry.error} />
         {overview.isLoading ? (
           <StateView kind="loading" title="Reading AGASTHY's database" compact />

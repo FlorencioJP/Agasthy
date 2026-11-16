@@ -1,6 +1,7 @@
 import type { ScanKind } from "@agasthy/shared-types";
 import { Badge, Button, StateView } from "@agasthy/ui";
 import { FolderPlus, RefreshCw, Trash2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { AiModelPanel } from "../components/ai-model-panel";
 import { Kv, PageHeader, Panel } from "../components/page";
@@ -137,8 +138,27 @@ const SCAN_DESCRIPTIONS: Record<ScanKind, string> = {
 
 function ScansPanel() {
   const activity = useScanActivity();
+  const qc = useQueryClient();
+  const schedule = useQuery({ queryKey: ["scan-schedule"], queryFn: api.scanSchedule });
+  const toggle = async (on: boolean) => {
+    await api.setAutoRefresh(on);
+    await qc.invalidateQueries({ queryKey: ["scan-schedule"] });
+  };
   return (
     <Panel title="Scans">
+      {schedule.data ? (
+        <label className="mb-3 flex items-start gap-2.5 rounded-md border border-line p-3 text-[12.5px]">
+          <input type="checkbox" className="mt-0.5" checked={schedule.data.auto_refresh} onChange={(e) => void toggle(e.target.checked)} />
+          <span>
+            <span className="font-medium text-fg">Keep data fresh in the background</span>
+            <span className="block text-[11.5px] text-muted">
+              While AGASTHY is open, packages, applications and tools, repositories and the AI ecosystem are scanned again when their data is older than{" "}
+              {schedule.data.refresh_after_hours} hours, but only areas you have scanned at least once. Security is never refreshed automatically. Background scans are
+              read-only and appear in the audit log as “scheduler”.
+            </span>
+          </span>
+        </label>
+      ) : null}
       <ul className="divide-y divide-line">
         {(["repositories", "software", "packages", "ai", "security"] as ScanKind[]).map((k) => {
           const running = activity.running.has(k);

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-scan-schedule"
+description = "Enables the scan_schedule command without any pre-configured scope."
+commands.allow = ["scan_schedule"]
+
+[[permission]]
+identifier = "deny-scan-schedule"
+description = "Denies the scan_schedule command without any pre-configured scope."
+commands.deny = ["scan_schedule"]

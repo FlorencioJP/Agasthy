@@ -1,7 +1,8 @@
 import { Sidebar, SidebarSection, StateView, Wordmark, sidebarItemClass } from "@agasthy/ui";
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Activity, Bot, Coins, Boxes, Camera, Gauge, GitCompareArrows, HardDrive, Loader2, Network, Settings, Shield, ShieldAlert, Sparkles, TerminalSquare } from "lucide-react";
-import { inDesktopShell } from "../lib/ipc";
+import { inDesktopShell, onNavigate } from "../lib/ipc";
 import { useAppInfo } from "../lib/queries";
 import { SCAN_LABELS, useScanActivity } from "./scan-activity";
 
@@ -52,6 +53,12 @@ function ScanIndicator() {
 
 export function Shell() {
   const info = useAppInfo();
+  const navigate = useNavigate();
+  useEffect(() => {
+    let off: (() => void) | undefined;
+    void onNavigate((route) => void navigate({ to: route })).then((u) => (off = u));
+    return () => off?.();
+  }, [navigate]);
   if (!inDesktopShell()) {
     return (
       <div className="flex h-full items-center justify-center">

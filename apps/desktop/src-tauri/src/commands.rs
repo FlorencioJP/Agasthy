@@ -239,19 +239,38 @@ pub async fn run_scan(
     kind: ScanKind,
 ) -> CmdResult<ScanRecord> {
     let st = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || scan_now(&app, &st.0, kind, "user"))
+        .await
+        .map_err(err)?
+}
+
+/// Run one scan on this thread. `actor` is recorded in the audit log
+/// (`user`, or `scheduler` for background refreshes).
+pub fn scan_now(
+    app: &AppHandle,
+    inner: &Inner,
+    kind: ScanKind,
+    actor: &str,
+) -> CmdResult<ScanRecord> {
     {
-        let mut running = st.0.running.lock().map_err(|_| "state lock poisoned")?;
+        let mut running = inner.running.lock().map_err(|_| "state lock poisoned")?;
         if !running.insert(kind) {
             return Err(format!("a {} scan is already running", kind.as_str()));
         }
     }
-    let app2 = app.clone();
-    let result = tauri::async_runtime::spawn_blocking(move || {
-        let _guard = RunningGuard { inner: &st.0, kind };
-        execute_scan(&app2, &st.0, kind)
-    })
-    .await
-    .map_err(err)?;
+    let _ = app.emit(
+        "scan-event",
+        ScanEvent {
+            kind,
+            stage: "started".into(),
+            progress: None,
+            message: None,
+        },
+    );
+    let result = {
+        let _guard = RunningGuard { inner, kind };
+        execute_scan(app, inner, kind, actor)
+    };
     let stage = if result.is_ok() { "finished" } else { "failed" };
     let _ = app.emit(
         "scan-event",
@@ -265,10 +284,15 @@ pub async fn run_scan(
     result
 }
 
-fn execute_scan(app: &AppHandle, inner: &Inner, kind: ScanKind) -> CmdResult<ScanRecord> {
+fn execute_scan(
+    app: &AppHandle,
+    inner: &Inner,
+    kind: ScanKind,
+    actor: &str,
+) -> CmdResult<ScanRecord> {
     let scan_id = with_store(inner, |s| {
         let id = s.begin_scan(kind)?;
-        s.audit("user", "scan.start", kind.as_str(), "started", None)?;
+        s.audit(actor, "scan.start", kind.as_str(), "started", None)?;
         Ok(id)
     })?;
 
@@ -309,7 +333,7 @@ fn execute_scan(app: &AppHandle, inner: &Inner, kind: ScanKind) -> CmdResult<Sca
                 with_store(inner, |s| {
                     s.fail_scan(scan_id, &issues)?;
                     s.audit(
-                        "user",
+                        actor,
                         "scan.finish",
                         kind.as_str(),
                         "failed",
@@ -354,7 +378,7 @@ fn execute_scan(app: &AppHandle, inner: &Inner, kind: ScanKind) -> CmdResult<Sca
     with_store(inner, |s| {
         let res = s.ingest(scan_id, &batch)?;
         s.audit(
-            "user",
+            actor,
             "scan.finish",
             kind.as_str(),
             if batch.issues.is_empty() {

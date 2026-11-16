@@ -32,9 +32,19 @@ export function ScanActivityProvider({ children }: { children: ReactNode }) {
       .catch(() => {});
     let unlisten: (() => void) | undefined;
     onScanEvent((e) => {
-      if (e.stage === "progress" && e.progress) {
+      // Background (scheduled) scans report through the same events.
+      if (e.stage === "started") {
+        setRunning((r) => new Set(r).add(e.kind));
+      } else if (e.stage === "progress" && e.progress) {
+        setRunning((r) => (r.has(e.kind) ? r : new Set(r).add(e.kind)));
         setProgress((p) => ({ ...p, [e.kind]: e.progress ?? undefined }));
       } else {
+        setRunning((r) => {
+          if (!r.has(e.kind)) return r;
+          const n = new Set(r);
+          n.delete(e.kind);
+          return n;
+        });
         setProgress((p) => ({ ...p, [e.kind]: undefined }));
         void invalidateRef.current();
       }

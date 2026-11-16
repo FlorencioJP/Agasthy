@@ -341,6 +341,18 @@ export async function installFixtureIpc(page: Page): Promise<void> {
         { repo_id: repo.id, repo_name: "fixture-widget", path: "/fixture/code/fixture-widget/.claude/worktrees/fix-login", branch: "fix-login", head: "abc123", locked: false, prunable: false, created_by: "Claude Code", changed_files: 3, active_agents: [], modified_at: now - 7_200_000 },
       ],
     };
+    responses.insights = {
+      generated_at: now,
+      insights: [
+        {
+          id: "agent-leftovers", severity: "warning", area: "Agents", title: "1 process left running by exited agents", detail: "fixture: a dev server holding 200 MB.",
+          action: { kind: "review", label: "Review stopping them", request: { type: "terminate_processes", targets: [{ pid: 40, start_time: 1040 }] } },
+        },
+        { id: "tokens-today", severity: "info", area: "Tokens", title: "Agents used 2.1M tokens today", detail: "fixture", action: { kind: "open", route: "/usage", label: "Open Token Usage" } },
+        { id: "stale-packages", severity: "info", area: "Freshness", title: "Package data is 9 days old", detail: "fixture", action: { kind: "scan", scan: "packages", label: "Scan now" } },
+      ],
+    };
+    responses.scan_schedule = { auto_refresh: true, refresh_after_hours: 24, kinds: ["packages", "software", "repositories", "ai"] };
     responses.operator_settings = {
       presets: [
         { id: "ollama", name: "Ollama (local)", kind: "openai_compatible", base_url: "http://127.0.0.1:11434/v1", default_model: "fixture-model", needs_key: false },

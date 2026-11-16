@@ -23,6 +23,7 @@ pub struct Inner {
     pub processes: Mutex<ProcessMonitor>,
     /// Remembers agent sessions' processes to recognise what they leave behind.
     pub agents: Mutex<agasthy_process::agents::AgentTracker>,
+    pub last_agents: Mutex<Option<agasthy_process::agents::AgentReport>>,
     /// Incremental reader over coding agents' local usage logs (counters only).
     pub usage: Mutex<agasthy_discovery::ai::usage::UsageIndex>,
     pub quarantine: Quarantine,
@@ -64,6 +65,7 @@ impl AppState {
             running: Mutex::new(HashSet::new()),
             processes: Mutex::new(ProcessMonitor::new()),
             agents: Mutex::new(agasthy_process::agents::AgentTracker::new()),
+            last_agents: Mutex::new(None),
             usage: Mutex::new(agasthy_discovery::ai::usage::UsageIndex::new()),
             quarantine,
             engine: ActionEngine::new(),

@@ -1,4 +1,6 @@
 import type {
+  InsightsReport,
+  ScanSchedule,
   UsageReport,
   AgentReport,
   WorktreeReport,
@@ -88,6 +90,9 @@ export const api = {
   listEdges: (kind: RelationKind) => invoke<Edge[]>("list_edges", { kind }),
   processes: () => invoke<ProcessSnapshot>("processes"),
   agentReport: () => invoke<AgentReport>("agent_report"),
+  insights: () => invoke<InsightsReport>("insights"),
+  scanSchedule: () => invoke<ScanSchedule>("scan_schedule"),
+  setAutoRefresh: (enabled: boolean) => invoke<void>("set_auto_refresh", { enabled }),
   agentWorktrees: () => invoke<WorktreeReport>("agent_worktrees"),
   /** Token counters from agents' own local logs; never message text. */
   agentUsage: (windowDays?: number) => invoke<UsageReport>("agent_usage", { windowDays }),
@@ -120,6 +125,12 @@ export const api = {
 export async function onScanEvent(handler: (e: ScanEvent) => void): Promise<() => void> {
   if (!isTauri()) return () => {};
   return listen<ScanEvent>("scan-event", (e) => handler(e.payload));
+}
+
+/** The menu-bar item asks the window to open a page. */
+export async function onNavigate(handler: (route: string) => void): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  return listen<string>("navigate", (e) => handler(e.payload));
 }
 
 export async function pickFolder(): Promise<string | null> {

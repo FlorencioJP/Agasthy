@@ -174,6 +174,19 @@ test.describe("with the fixture backend", () => {
     await expect(page.getByRole("img", { name: /Daily token usage/ })).toBeVisible();
   });
 
+  test("overview insights are ranked and act through pages, scans or a dry-run review", async ({ page }) => {
+    await page.goto("/#/");
+    const list = page.getByRole("list", { name: "Insights" });
+    await expect(list.getByRole("listitem").first()).toContainText("left running by exited agents");
+    await list.getByRole("button", { name: "Review stopping them" }).click();
+    await expect(page.getByRole("dialog", { name: "Review action" })).toBeVisible();
+    await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+    await list.getByRole("button", { name: "Open Token Usage" }).click();
+    await expect(page).toHaveURL(/#\/usage/);
+    await page.goto("/#/settings");
+    await expect(page.getByRole("checkbox", { name: /Keep data fresh in the background/ })).toBeChecked();
+  });
+
   test("snapshots list what is missing as commands, never values", async ({ page }) => {
     await page.goto("/#/snapshots");
     await page.getByRole("button", { name: "What's missing?" }).click();

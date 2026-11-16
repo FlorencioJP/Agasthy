@@ -50,6 +50,9 @@
     "allow-operator-ask",
     "allow-agent-report",
     "allow-agent-worktrees",
-    "allow-agent-usage"
+    "allow-agent-usage",
+    "allow-insights",
+    "allow-scan-schedule",
+    "allow-set-auto-refresh"
   ]
 }
