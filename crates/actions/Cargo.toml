@@ -4,6 +4,7 @@ description = "Typed, approval-gated actions for AGASTHY: plan, confirm, execute
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+publish.workspace = true
 authors.workspace = true
 rust-version.workspace = true
 

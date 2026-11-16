@@ -23,6 +23,8 @@ version = "0.1.1"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["The AGASTHY Authors"]
+# Distributed as an app, not published to crates.io.
+publish = false
 rust-version = "1.90"
 
 [workspace.dependencies]

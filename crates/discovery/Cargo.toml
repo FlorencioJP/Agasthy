@@ -4,6 +4,7 @@ description = "Read-only discovery of repositories, software and packages for AG
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+publish.workspace = true
 authors.workspace = true
 rust-version.workspace = true
 

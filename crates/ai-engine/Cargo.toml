@@ -4,6 +4,7 @@ description = "AGASTHY's AI Operator: provider-agnostic, tool-using, approval-ga
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+publish.workspace = true
 authors.workspace = true
 rust-version.workspace = true
 

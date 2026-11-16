@@ -4,6 +4,7 @@ description = "Safe Update Lab for AGASTHY: try dependency updates in an isolate
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+publish.workspace = true
 authors.workspace = true
 rust-version.workspace = true
 

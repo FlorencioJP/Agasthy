@@ -6,6 +6,15 @@ all-features = false
 [advisories]
 version = 2
 yanked = "deny"
+# "Unmaintained" notices (not vulnerabilities) for crates we only get
+# transitively, on Linux, through Tauri's GTK stack and the keyring crate's
+# Secret Service backend. Revisit when those upstreams move off them.
+ignore = [
+  { id = "RUSTSEC-2024-0370", reason = "proc-macro-error: build-time macro dep of gtk-rs via Tauri (Linux only)" },
+  { id = "RUSTSEC-2026-0370", reason = "zvariant: D-Bus via keyring's Linux secret-service backend" },
+  { id = "RUSTSEC-2026-0371", reason = "zbus_names: D-Bus via keyring's Linux secret-service backend" },
+  { id = "RUSTSEC-2026-0372", reason = "zvariant_derive: D-Bus via keyring's Linux secret-service backend" },
+]
 
 [licenses]
 version = 2

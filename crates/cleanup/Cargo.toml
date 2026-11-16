@@ -4,6 +4,7 @@ description = "Disk analysis, cleanup candidates and a restorable quarantine for
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+publish.workspace = true
 authors.workspace = true
 rust-version.workspace = true
 
