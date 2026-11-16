@@ -1,3 +1,4 @@
+
 <p align="center">
   <img src="apps/desktop/app-icon.svg" width="88" alt="AGASTHY mark" />
 </p>
@@ -18,6 +19,8 @@ free disk space safely, and ask plain questions about your machine with evidence
   Linux from source ·
   free and open source · no account · no telemetry
 </p>
+
+https://github.com/user-attachments/assets/2718c8ae-1576-4c4f-a494-646731a019fa
 
 <p align="center">
   <img src="docs/media/agasthy-demo.gif" width="900" alt="AGASTHY in one minute: Overview insights, Discovery, Machine Graph, Impact Analysis, AI Ecosystem, Agents, Token Usage, Processes, Storage, AI Operator, the review dialog, Security and Snapshots" />
