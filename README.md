@@ -4,16 +4,18 @@
 
 <h1 align="center">AGASTHY</h1>
 
-<p align="center"><strong>Mission control for your Mac when you build with AI coding agents.</strong></p>
+<p align="center"><strong>One intelligence layer for your developer machine.</strong></p>
 
 <p align="center">
-See every agent you have running and what it costs. Catch what agents leave running after they exit.<br/>
-Free disk space without breaking anything. Ask plain questions about your machine and get answers with evidence.
+Every repo, runtime, package and AI tool on your machine, connected in a live knowledge graph.<br/>
+Track coding agents and what they cost, see what breaks before you remove anything,<br/>
+free disk space safely, and ask plain questions about your machine with evidence behind every answer.
 </p>
 
 <p align="center">
   <a href="https://github.com/HMAKT99/Agasthy/releases/latest"><strong>Download for Mac (Apple silicon)</strong></a> ·
   <a href="https://github.com/HMAKT99/Agasthy/releases/latest">Windows preview</a> ·
+  Linux from source ·
   free and open source · no account · no telemetry
 </p>
 
@@ -28,17 +30,20 @@ Free disk space without breaking anything. Ask plain questions about your machin
 
 ## Why you'll want it
 
-You run Claude Code in three terminals, Codex in another, Cursor on the side. Each one starts MCP servers, dev servers and watchers. A week later your Mac is swapping, your disk is full of `node_modules` and `target` folders, port 3000 is "already in use", and you have no idea what the agents actually spent. **AGASTHY shows you all of it in one place, and fixes it safely.**
+A developer machine holds hundreds of moving parts: cloned repositories, several copies of the same runtime, packages from six package managers, AI tools with their own configs, and now coding agents starting servers in every terminal. Nothing shows you how they connect, what they cost, or what is safe to remove. **AGASTHY reads the machine itself, links everything in one graph, and lets you act on it safely.**
 
 | | |
 |---|---|
-| 🤖 **Every coding agent, live** | Claude Code, Codex, Gemini CLI, Cursor Agent, Aider, Hermes Agent, OpenClaw and more, plus anything that starts MCP servers. For each session: memory, CPU, ports, MCP and dev servers, and the folder it works in. |
-| 🧹 **What agents leave behind** | When an agent exits but its dev server or MCP server keeps running, AGASTHY tells you which session started it and stops it in one reviewed step. |
-| 🪙 **What your agents cost** | Tokens, requests and estimated cost per day, session, project and model, read from Claude Code, Codex and Hermes logs on your Mac. Counters only, never your prompts. |
-| 💾 **Free disk space safely** | Finds rebuildable `node_modules`, `target`, virtualenvs, build output and caches. It only offers folders Git ignores and that contain no tracked files, and moves them to a quarantine you can restore from. |
-| 💬 **Ask your machine** | "What is using my RAM?" · "Free 10 GB safely" · "Which repos haven't I touched in 90 days?" · "What breaks if I remove openssl@3?" Works with no AI model at all; optionally connect a local model (Ollama, LM Studio) or a cloud one. |
-| 🧭 **Insights + menu bar** | A ranked list of what needs attention (low disk, swap pressure, token spikes, stale data, security findings), always one click away in the menu bar. |
-| 🕸️ **Know what depends on what** | Projects, runtimes, packages, tools and AI configuration in one graph. Simulate removing anything before you do it. |
+| 📦 **Everything, discovered** | Repositories (branch, uncommitted work, remotes, duplicate clones), applications, CLI tools and runtimes (which copy is active, which are shadowed), and packages from Homebrew, npm, pnpm, uv, pip and cargo. Every fact carries its evidence. |
+| 🕸️ **A knowledge graph of your machine** | Projects, runtimes, dependencies, packages, tools and AI configuration, linked. See which projects share a dependency and what relies on what. |
+| 💥 **Impact analysis** | "What breaks if I remove this?" for any package, runtime or tool, simulated before you touch anything. Try dependency upgrades in an isolated Update Lab. |
+| 🤖 **Coding agents, live** | Every Claude Code, Codex, Gemini CLI, Cursor, Aider, Hermes or OpenClaw session with its memory, ports, MCP and dev servers. When an agent exits and leaves a server running, AGASTHY says which session started it and stops it in one reviewed step. |
+| 🪙 **Token spend** | Tokens, requests and estimated cost per day, session, project and model, from the agents' own local logs. Counters only, never your prompts. Export to CSV. |
+| 🧠 **AI ecosystem** | Installed AI tools, providers, local models, MCP servers in every config, and instruction files (`CLAUDE.md`, `AGENTS.md`, rules) with duplicates, orphans and conflicts. |
+| 💾 **Safe disk cleanup** | Rebuildable `node_modules`, `target`, virtualenvs, build output and caches. Only what Git ignores and nothing tracked, moved to a quarantine you can restore from. |
+| 🛡️ **Security & snapshots** | Outdated packages, tools of unknown origin, opt-in vulnerability advisories. Snapshot your setup and get the commands to rebuild it on a new machine. |
+| 💬 **Ask your machine** | "What is using my RAM?" · "Free 10 GB safely" · "Which repos haven't I touched in 90 days?" · "What breaks if I remove openssl@3?" Works with no AI model; optionally connect Ollama, LM Studio or a cloud model. |
+| 🧭 **Insights + menu bar** | A ranked list of what needs attention right now (low disk, swap pressure, token spikes, stale data), one click away in the menu bar. |
 
 ## Built to be trusted
 
