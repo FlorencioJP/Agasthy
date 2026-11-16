@@ -1,6 +1,6 @@
 import { Sidebar, SidebarSection, StateView, Wordmark, sidebarItemClass } from "@agasthy/ui";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Activity, Bot, Boxes, Camera, Gauge, GitCompareArrows, HardDrive, Loader2, Network, Settings, Shield, ShieldAlert, Sparkles } from "lucide-react";
+import { Activity, Bot, Coins, Boxes, Camera, Gauge, GitCompareArrows, HardDrive, Loader2, Network, Settings, Shield, ShieldAlert, Sparkles, TerminalSquare } from "lucide-react";
 import { inDesktopShell } from "../lib/ipc";
 import { useAppInfo } from "../lib/queries";
 import { SCAN_LABELS, useScanActivity } from "./scan-activity";
@@ -9,6 +9,8 @@ import { SCAN_LABELS, useScanActivity } from "./scan-activity";
 const NAV = [
   { to: "/", label: "Overview", icon: Gauge, exact: true },
   { to: "/operator", label: "AI Operator", icon: Sparkles, exact: false },
+  { to: "/agents", label: "Agents", icon: TerminalSquare, exact: false },
+  { to: "/usage", label: "Token Usage", icon: Coins, exact: false },
   { to: "/discovery", label: "Discovery", icon: Boxes, exact: false },
   { to: "/graph", label: "Machine Graph", icon: Network, exact: false },
   { to: "/ai", label: "AI Ecosystem", icon: Bot, exact: false },

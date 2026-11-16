@@ -97,3 +97,26 @@ export function shortenHome(path: string, home?: string | null): string {
   if (m) return "~" + (m[1] ?? "");
   return path;
 }
+
+/** Compact token counts: 950, 12.4K, 3.1M, 2.5B. */
+export function formatTokens(n: number): string {
+  if (!Number.isFinite(n) || n < 0) return "—";
+  if (n < 1000) return String(n);
+  const units: [number, string][] = [
+    [1e9, "B"],
+    [1e6, "M"],
+    [1e3, "K"],
+  ];
+  for (const [v, u] of units) {
+    if (n >= v) {
+      const x = n / v;
+      return `${x.toFixed(x >= 100 ? 0 : 1)}${u}`;
+    }
+  }
+  return String(n);
+}
+
+export function formatUsd(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return n >= 100 ? `$${Math.round(n).toLocaleString()}` : `$${n.toFixed(2)}`;
+}

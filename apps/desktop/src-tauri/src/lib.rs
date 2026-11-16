@@ -4,6 +4,7 @@
 //! commands to the webview and forwards events. All product logic lives in the
 //! `crates/` workspace members.
 
+mod agents;
 mod commands;
 mod intel;
 mod operator;
@@ -26,6 +27,7 @@ pub fn run() {
                 .app_data_dir()
                 .map_err(|e| format!("could not resolve the app data directory: {e}"))?;
             let state = state::AppState::open(data_dir)?;
+            agents::start_sampler(state.0.clone());
             app.manage(state);
             Ok(())
         })
@@ -49,6 +51,9 @@ pub fn run() {
             commands::runtime_impact,
             commands::shared_dependencies,
             commands::list_edges,
+            agents::agent_report,
+            agents::agent_worktrees,
+            agents::agent_usage,
             ops::processes,
             ops::disk_analysis,
             ops::cached_disk_analysis,

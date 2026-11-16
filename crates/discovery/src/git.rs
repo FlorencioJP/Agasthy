@@ -142,6 +142,63 @@ pub fn read_status(runner: &dyn CommandRunner, repo: &Path) -> Availability<Work
     }
 }
 
+/// One entry of `git worktree list --porcelain`.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct WorktreeEntry {
+    pub path: String,
+    pub head: Option<String>,
+    /// Short branch name (`main`), or `None` when detached.
+    pub branch: Option<String>,
+    pub is_main: bool,
+    pub locked: bool,
+    /// Git reports the worktree's folder is gone; `git worktree prune` would remove the record.
+    pub prunable: bool,
+}
+
+pub fn read_worktrees(runner: &dyn CommandRunner, repo: &Path) -> Availability<Vec<WorktreeEntry>> {
+    match run_git(
+        runner,
+        repo,
+        &["worktree", "list", "--porcelain"],
+        Duration::from_secs(15),
+    ) {
+        Ok(o) if o.success() => Availability::available(parse_worktrees(&o.stdout)),
+        Ok(o) => Availability::unavailable(first_line(&o.stderr, "git worktree list failed")),
+        Err(e) => err_to_availability(e),
+    }
+}
+
+pub fn parse_worktrees(out: &str) -> Vec<WorktreeEntry> {
+    let mut v: Vec<WorktreeEntry> = Vec::new();
+    for line in out.lines() {
+        if let Some(path) = line.strip_prefix("worktree ") {
+            v.push(WorktreeEntry {
+                path: path.to_string(),
+                head: None,
+                branch: None,
+                is_main: v.is_empty(),
+                locked: false,
+                prunable: false,
+            });
+            continue;
+        }
+        let Some(cur) = v.last_mut() else { continue };
+        if let Some(h) = line.strip_prefix("HEAD ") {
+            cur.head = Some(h.chars().take(12).collect());
+        } else if let Some(b) = line.strip_prefix("branch ") {
+            cur.branch = Some(b.trim_start_matches("refs/heads/").to_string());
+        } else if line == "locked" || line.starts_with("locked ") {
+            cur.locked = true;
+        } else if line == "prunable" || line.starts_with("prunable ") {
+            cur.prunable = true;
+        } else if line == "bare" {
+            cur.is_main = true;
+        }
+    }
+    v
+}
+
 pub fn parse_porcelain_z(out: &str) -> WorkingTreeStatus {
     let mut s = WorkingTreeStatus {
         clean: true,
@@ -242,6 +299,19 @@ fn first_line(s: &str, fallback: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn worktree_porcelain() {
+        let out = "worktree /u/web\nHEAD 0123456789abcdef0123\nbranch refs/heads/main\n\nworktree /u/web/.claude/worktrees/fix-a\nHEAD fedcba9876543210\ndetached\nlocked\n\nworktree /tmp/gone\nHEAD aaaa\nbranch refs/heads/feat/x\nprunable gitdir file points to non-existent location\n";
+        let w = super::parse_worktrees(out);
+        assert_eq!(w.len(), 3);
+        assert!(w[0].is_main && !w[1].is_main);
+        assert_eq!(w[0].branch.as_deref(), Some("main"));
+        assert_eq!(w[0].head.as_deref(), Some("0123456789ab"));
+        assert!(w[1].branch.is_none() && w[1].locked);
+        assert!(w[2].prunable);
+        assert_eq!(w[2].branch.as_deref(), Some("feat/x"));
+    }
+
     use super::*;
     use agasthy_platform::{CommandOutput, MockCommandRunner};
 

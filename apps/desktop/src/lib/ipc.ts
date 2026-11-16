@@ -1,4 +1,7 @@
 import type {
+  UsageReport,
+  AgentReport,
+  WorktreeReport,
   ChatTurn,
   OperatorAnswer,
   OperatorSettings,
@@ -84,6 +87,10 @@ export const api = {
   sharedDependencies: (limit?: number) => invoke<SharedDependency[]>("shared_dependencies", { limit }),
   listEdges: (kind: RelationKind) => invoke<Edge[]>("list_edges", { kind }),
   processes: () => invoke<ProcessSnapshot>("processes"),
+  agentReport: () => invoke<AgentReport>("agent_report"),
+  agentWorktrees: () => invoke<WorktreeReport>("agent_worktrees"),
+  /** Token counters from agents' own local logs; never message text. */
+  agentUsage: (windowDays?: number) => invoke<UsageReport>("agent_usage", { windowDays }),
   diskAnalysis: () => invoke<DiskAnalysis>("disk_analysis"),
   cachedDiskAnalysis: () => invoke<DiskAnalysis | null>("cached_disk_analysis"),
   quarantineList: () => invoke<QuarantineOp[]>("quarantine_list"),

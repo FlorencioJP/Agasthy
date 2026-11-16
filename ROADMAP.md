@@ -102,3 +102,13 @@ A box is ticked only when the item is implemented **and** verified. Anything par
 - [ ] Validate the Windows and Linux adapters on real hardware (status stays "unvalidated" until then)
 - [ ] WinGet inventory (its `list` output is a localized table), Windows services, GPU information on Windows and Linux
 - [ ] Streaming Operator answers; conversation history beyond the current session
+
+## Agent Control Center
+
+- [x] Agents page: sessions for 14 recognised coding agents plus any process that starts MCP servers; process trees, memory, CPU, ports, MCP/dev servers, host app
+- [x] Processes left running after an agent exits, attributed to their session; reviewed batch stop
+- [x] Git worktrees with creator, uncommitted changes and active agents
+- [x] Token Usage page from Claude Code and Codex logs and Hermes Agent's database (counters only); `agasthy usage`
+- [ ] Windows: graceful stop (no SIGTERM; needs a WM_CLOSE / console-control path) and detached-process detection (Windows does not re-parent orphans to PID 1)
+- [ ] Usage readers for more agents as their local formats are verified (OpenClaw, Gemini CLI, OpenCode)
+- [ ] Worktree cleanup action (remove a clean, inactive worktree through `git worktree remove`)

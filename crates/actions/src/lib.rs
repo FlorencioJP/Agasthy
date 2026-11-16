@@ -25,6 +25,17 @@ use agasthy_update_lab::{
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+/// A process addressed by PID and start time (so a reused PID is never hit).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ProcessTarget {
+    pub pid: u32,
+    pub start_time: u64,
+}
+
+/// Most processes one batch may stop.
+pub const MAX_BATCH_TARGETS: usize = 50;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[ts(export)]
@@ -35,6 +46,10 @@ pub enum ActionRequest {
         start_time: u64,
         force: bool,
     },
+    /// Ask several processes to exit (SIGTERM only; never force). Used to
+    /// clean up after a coding-agent session. Each target is checked like a
+    /// single `TerminateProcess`; protected targets are skipped.
+    TerminateProcesses { targets: Vec<ProcessTarget> },
     /// Move cleanup candidates (from the latest disk analysis) into quarantine.
     QuarantinePaths { paths: Vec<String> },
     /// Move a quarantine operation's items back to where they were.
@@ -67,6 +82,7 @@ impl ActionRequest {
         match self {
             ActionRequest::TerminateProcess { force: false, .. } => "process.terminate",
             ActionRequest::TerminateProcess { force: true, .. } => "process.force_terminate",
+            ActionRequest::TerminateProcesses { .. } => "process.terminate_batch",
             ActionRequest::QuarantinePaths { .. } => "cleanup.quarantine",
             ActionRequest::RestoreQuarantine { .. } => "cleanup.restore",
             ActionRequest::PurgeQuarantine { .. } => "cleanup.purge",
@@ -244,6 +260,56 @@ impl ActionEngine {
                     can_execute: blocked.is_none(),
                     reversible: false,
                     recovery: "A stopped process can be started again the way it was started originally. AGASTHY does not restart it.".into(),
+                    expires_in_secs: PLAN_TTL.as_secs() as u32,
+                }
+            }
+            ActionRequest::TerminateProcesses { targets } => {
+                let mut items = Vec::new();
+                let mut ok = 0usize;
+                let mut seen = std::collections::HashSet::new();
+                for t in targets {
+                    if !seen.insert((t.pid, t.start_time)) {
+                        continue;
+                    }
+                    let check = if targets.len() > MAX_BATCH_TARGETS {
+                        Err(format!(
+                            "a batch can stop at most {MAX_BATCH_TARGETS} processes"
+                        ))
+                    } else {
+                        ctx.monitor
+                            .lock()
+                            .map_err(|_| "process monitor unavailable".to_string())
+                            .and_then(|mut m| m.check_target(t.pid, t.start_time))
+                    };
+                    let (name, blocked) = match check {
+                        Ok((name, reason)) => (name, reason),
+                        Err(e) => (format!("PID {}", t.pid), Some(e)),
+                    };
+                    if blocked.is_none() {
+                        ok += 1;
+                    }
+                    items.push(PlanItem {
+                        label: name,
+                        detail: Some(format!("PID {}", t.pid)),
+                        bytes: None,
+                        blocked,
+                    });
+                }
+                ActionPlan {
+                    token: None,
+                    request: request.clone(),
+                    title: format!("Stop {ok} process{}", if ok == 1 { "" } else { "es" }),
+                    summary: format!(
+                        "Send SIGTERM to {ok} process{}{}.",
+                        if ok == 1 { "" } else { "es" },
+                        if items.len() > ok { format!("; {} will be skipped", items.len() - ok) } else { String::new() }
+                    ),
+                    items,
+                    total_bytes: None,
+                    warnings: vec!["Each process is asked to exit. Unsaved work in a dev server or tool may be lost; a process that ignores the request keeps running (force quit stays a separate, per-process choice).".into()],
+                    can_execute: ok > 0,
+                    reversible: false,
+                    recovery: "Start the servers again the way they were started (for example `npm run dev`). AGASTHY does not restart them.".into(),
                     expires_in_secs: PLAN_TTL.as_secs() as u32,
                 }
             }
@@ -489,6 +555,51 @@ impl ActionEngine {
                     Err(e) => failed("Stop process", &e),
                 }
             }
+            ActionRequest::TerminateProcesses { targets } => {
+                let mut stopped = Vec::new();
+                let mut problems = Vec::new();
+                let mut seen = std::collections::HashSet::new();
+                for t in targets.iter().take(MAX_BATCH_TARGETS) {
+                    if !seen.insert((t.pid, t.start_time)) {
+                        continue;
+                    }
+                    let r = ctx
+                        .monitor
+                        .lock()
+                        .map_err(|_| "process monitor unavailable".to_string())
+                        .and_then(|mut m| {
+                            // Re-validated here: it may have exited or changed since the plan.
+                            match m.check_target(t.pid, t.start_time)? {
+                                (_, Some(reason)) => Err(reason),
+                                _ => {
+                                    m.terminate(t.pid, t.start_time, false, Duration::from_secs(5))
+                                }
+                            }
+                        });
+                    match r {
+                        Ok(o) if o.exited => stopped.push(format!("{} (PID {})", o.name, t.pid)),
+                        Ok(o) => {
+                            problems.push(format!("{} (PID {}) is still running", o.name, t.pid))
+                        }
+                        Err(e) => problems.push(format!("PID {}: {e}", t.pid)),
+                    }
+                }
+                let outcome = match (stopped.is_empty(), problems.is_empty()) {
+                    (false, true) => ActionOutcome::Succeeded,
+                    (false, false) => ActionOutcome::PartiallySucceeded,
+                    _ => ActionOutcome::Failed,
+                };
+                ActionResult {
+                    title: format!("Stopped {} of {} processes", stopped.len(), stopped.len() + problems.len()),
+                    outcome,
+                    message: if stopped.is_empty() { "No process was stopped.".into() } else { format!("Stopped: {}.", stopped.join(", ")) },
+                    details: problems,
+                    verification: "For each process, polled the process table after the signal: no process with that PID and start time remains.".into(),
+                    recovery: None,
+                    bytes: None,
+                    quarantine_op: None,
+                }
+            }
             ActionRequest::QuarantinePaths { paths } => {
                 let mut requests = Vec::new();
                 let mut problems = Vec::new();
@@ -589,6 +700,11 @@ impl ActionEngine {
         };
         let target = match &request {
             ActionRequest::TerminateProcess { pid, .. } => format!("pid {pid}"),
+            ActionRequest::TerminateProcesses { targets } => targets
+                .iter()
+                .map(|t| format!("pid {}", t.pid))
+                .collect::<Vec<_>>()
+                .join(", "),
             ActionRequest::QuarantinePaths { paths } => paths.join(", "),
             ActionRequest::RestoreQuarantine { op_id }
             | ActionRequest::PurgeQuarantine { op_id } => op_id.clone(),

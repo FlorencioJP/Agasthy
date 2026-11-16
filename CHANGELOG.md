@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added (Agent Control Center)
+- Agents page: live coding-agent sessions (Claude Code, Codex, Gemini CLI, Cursor Agent, Copilot CLI, Aider, OpenCode, Goose, Amp, Qwen Code, Hermes Agent, OpenClaw, Crush, Kilo Code), plus any process that starts MCP servers, with each session's process tree, memory, CPU, ports, MCP and dev servers, and host app.
+- Processes left running after an agent exited, attributed to the session that started them; one reviewed action stops them (new `terminate_processes` action, SIGTERM only).
+- Git worktrees in scanned repositories, with the tool that created them, uncommitted changes and agents working in them.
+- Token Usage page: tokens, requests and estimated cost per day, session, project folder and model, from Claude Code and Codex logs and Hermes Agent's database (counters only). `agasthy usage` CLI command.
+- Operator: "What are my coding agents doing?" and "Clean up after my agents".
+
 ### Added (Phase 6)
 - AI Operator page: a built-in mode that answers common questions with no model, and an optional model mode with a tool-calling loop over typed, read-only tools.
 - Providers: Ollama, LM Studio, vLLM, LocalAI, OpenAI, Google Gemini, OpenRouter and custom OpenAI-compatible endpoints, and Anthropic (Messages API). Keys stored in the OS credential store; cloud models need an explicit opt-in.

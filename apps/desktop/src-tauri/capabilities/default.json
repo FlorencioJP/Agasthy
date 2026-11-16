@@ -47,6 +47,9 @@
     "allow-operator-set-key",
     "allow-operator-delete-key",
     "allow-operator-set-cloud-consent",
-    "allow-operator-ask"
+    "allow-operator-ask",
+    "allow-agent-report",
+    "allow-agent-worktrees",
+    "allow-agent-usage"
   ]
 }

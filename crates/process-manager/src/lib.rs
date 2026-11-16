@@ -7,6 +7,8 @@
 //!   offers force after an explicit, separate confirmation;
 //! * the outcome is verified by polling, never assumed.
 
+pub mod agents;
+
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 

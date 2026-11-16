@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-agent-worktrees"
+description = "Enables the agent_worktrees command without any pre-configured scope."
+commands.allow = ["agent_worktrees"]
+
+[[permission]]
+identifier = "deny-agent-worktrees"
+description = "Denies the agent_worktrees command without any pre-configured scope."
+commands.deny = ["agent_worktrees"]

@@ -69,7 +69,12 @@ pub async fn processes(state: State<'_, AppState>) -> CmdResult<ProcessSnapshot>
             st.0.processes
                 .lock()
                 .map_err(|_| "process monitor lock poisoned")?;
-        Ok(m.snapshot(&st.0.runner, &repos))
+        let snap = m.snapshot(&st.0.runner, &repos);
+        drop(m);
+        if let Ok(mut a) = st.0.agents.lock() {
+            a.update(&snap);
+        }
+        Ok(snap)
     })
     .await
     .map_err(|e| e.to_string())?

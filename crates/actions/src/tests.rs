@@ -240,3 +240,52 @@ fn lab_actions_need_a_lab_store_and_known_repo() {
     assert!(!plan.can_execute);
     assert!(plan.token.is_none());
 }
+
+#[cfg(unix)]
+#[test]
+fn stops_a_batch_and_skips_protected_targets() {
+    let f = fixture();
+    let engine = ActionEngine::new();
+    let c = ctx(&f, true);
+    let mut a = std::process::Command::new("/bin/sleep")
+        .arg("30")
+        .spawn()
+        .unwrap();
+    let mut b = std::process::Command::new("/bin/sleep")
+        .arg("30")
+        .spawn()
+        .unwrap();
+    let snap = f.monitor.lock().unwrap().snapshot(&f.runner, &[]);
+    let target = |pid: u32| {
+        let p = snap.processes.iter().find(|p| p.pid == pid).unwrap();
+        ProcessTarget {
+            pid: p.pid,
+            start_time: p.start_time,
+        }
+    };
+    let me = target(snap.own_pid);
+    let request = ActionRequest::TerminateProcesses {
+        targets: vec![target(a.id()), target(b.id()), me, target(a.id())],
+    };
+    let plan = engine.plan(&c, request);
+    assert!(plan.can_execute, "{plan:?}");
+    assert_eq!(plan.items.len(), 3, "duplicates collapsed");
+    assert_eq!(
+        plan.items.iter().filter(|i| i.blocked.is_some()).count(),
+        1,
+        "AGASTHY itself is refused"
+    );
+    let mut audited = Vec::new();
+    let mut audit = |action: &str, target: &str, outcome: &str, _: &str| {
+        audited.push(format!("{action} {target} {outcome}"))
+    };
+    let r = engine.execute(&c, plan.token.as_ref().unwrap(), &mut audit);
+    let _ = a.wait();
+    let _ = b.wait();
+    assert_eq!(r.outcome, ActionOutcome::PartiallySucceeded, "{r:?}");
+    assert!(r.title.starts_with("Stopped 2 of 3"), "{}", r.title);
+    assert!(
+        audited[0].starts_with("process.terminate_batch"),
+        "{audited:?}"
+    );
+}

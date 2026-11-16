@@ -5,6 +5,8 @@ import { AI_TABS, AiPage, type AiSearch, type AiTab } from "./pages/ai";
 import { GraphPage, type GraphMode, type GraphSearch } from "./pages/graph";
 import { OverviewPage } from "./pages/overview";
 import { OperatorPage } from "./pages/operator";
+import { AgentsPage } from "./pages/agents";
+import { UsagePage } from "./pages/usage";
 import { ImpactPage, type ImpactSearch } from "./pages/impact";
 import { ProcessesPage } from "./pages/processes";
 import { SecurityPage } from "./pages/security";
@@ -82,13 +84,15 @@ const impactRoute = createRoute({
   component: ImpactPage,
 });
 const snapshotsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/snapshots", component: SnapshotsPage });
+const agentsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/agents", component: AgentsPage });
+const usageRoute = createRoute({ getParentRoute: () => rootRoute, path: "/usage", component: UsagePage });
 const operatorRoute = createRoute({ getParentRoute: () => rootRoute, path: "/operator", component: OperatorPage });
 const securityRoute = createRoute({ getParentRoute: () => rootRoute, path: "/security", component: SecurityPage });
 
 const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/settings", component: SettingsPage });
 const privacyRoute = createRoute({ getParentRoute: () => rootRoute, path: "/privacy", component: PrivacyPage });
 
-const routeTree = rootRoute.addChildren([overviewRoute, discoveryRoute, graphRoute, aiRoute, processesRoute, storageRoute, securityRoute, impactRoute, snapshotsRoute, operatorRoute, settingsRoute, privacyRoute]);
+const routeTree = rootRoute.addChildren([overviewRoute, discoveryRoute, graphRoute, aiRoute, processesRoute, storageRoute, securityRoute, impactRoute, snapshotsRoute, operatorRoute, agentsRoute, usageRoute, settingsRoute, privacyRoute]);
 
 // Hash history: the packaged app serves static files, so deep links must not hit the server.
 export const router = createRouter({ routeTree, history: createHashHistory() });

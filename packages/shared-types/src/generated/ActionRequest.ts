@@ -2,5 +2,6 @@
 import type { DockerPrune } from "./DockerPrune";
 import type { LabEcosystem } from "./LabEcosystem";
 import type { LabStep } from "./LabStep";
+import type { ProcessTarget } from "./ProcessTarget";
 
-export type ActionRequest = { "type": "terminate_process", pid: number, start_time: number, force: boolean, } | { "type": "quarantine_paths", paths: Array<string>, } | { "type": "restore_quarantine", op_id: string, } | { "type": "purge_quarantine", op_id: string, } | { "type": "docker_prune", target: DockerPrune, } | { "type": "create_update_lab", repo_id: string, ecosystem: LabEcosystem, package: string, target_version: string, } | { "type": "run_lab_step", lab_id: string, step: LabStep, allow_scripts: boolean, } | { "type": "apply_lab", lab_id: string, } | { "type": "discard_lab", lab_id: string, };
+export type ActionRequest = { "type": "terminate_process", pid: number, start_time: number, force: boolean, } | { "type": "terminate_processes", targets: Array<ProcessTarget>, } | { "type": "quarantine_paths", paths: Array<string>, } | { "type": "restore_quarantine", op_id: string, } | { "type": "purge_quarantine", op_id: string, } | { "type": "docker_prune", target: DockerPrune, } | { "type": "create_update_lab", repo_id: string, ecosystem: LabEcosystem, package: string, target_version: string, } | { "type": "run_lab_step", lab_id: string, step: LabStep, allow_scripts: boolean, } | { "type": "apply_lab", lab_id: string, } | { "type": "discard_lab", lab_id: string, };

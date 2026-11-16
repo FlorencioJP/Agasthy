@@ -28,6 +28,12 @@ This describes AGASTHY v0.1.0. The in-app **Privacy** page shows the live values
 
 AGASTHY never scans your whole disk. Repository discovery only looks inside folders you add, and system locations and `~/Library` cannot be added.
 
+## Agent sessions and token usage
+
+- **Agents page.** Every 45 seconds while AGASTHY runs, it reads the process table (as the Processes page does) to group coding-agent processes into sessions and to remember which processes each session started, so that it can say what was left running after an agent exited. This list is kept in memory only.
+- **Token Usage page.** AGASTHY reads coding agents' own local usage records: Claude Code session logs (`~/.claude/projects/**/*.jsonl`), Codex session logs (`~/.codex/sessions/**/*.jsonl`) and Hermes Agent's database (`~/.hermes/state.db`, opened read-only; only token and cost columns are selected). Only token counters, model names, timestamps and the session folder are kept, in memory; prompts, replies and tool output are never stored, shown or sent. Cost figures are estimates at API list prices.
+- Git worktrees of scanned repositories are listed with `git worktree list --porcelain` and `git status`.
+
 ## Stores
 
 API keys for AI providers are stored only in the operating system's credential store (macOS Keychain, Windows Credential Manager, the Linux kernel keyring), under the service `org.agasthy.desktop`. They are never written to AGASTHY's database, logs or files. The chosen provider, endpoint and model are stored in the database.
@@ -46,7 +52,7 @@ Also `curl` (OSV.dev when enabled, and the AI model endpoint you configure), `ls
 
 ## Changes
 
-Changes happen only when you confirm a reviewed plan. In this build that means: stopping or force-quitting a process you own; moving cleanup candidates into AGASTHY's quarantine; restoring or permanently deleting quarantined items; and pruning Docker build cache or dangling images. Each one is planned as a dry run first (exact targets, sizes, risks, recovery), re-validated just before it runs, verified afterwards and written to the audit log. AGASTHY never uses `sudo`, never deletes Git repositories or files tracked by Git, never removes Docker volumes, and never stops system processes or other users' processes.
+Changes happen only when you confirm a reviewed plan. In this build that means: stopping or force-quitting a process you own, or stopping several (for example what an agent left running); moving cleanup candidates into AGASTHY's quarantine; restoring or permanently deleting quarantined items; and pruning Docker build cache or dangling images. Each one is planned as a dry run first (exact targets, sizes, risks, recovery), re-validated just before it runs, verified afterwards and written to the audit log. AGASTHY never uses `sudo`, never deletes Git repositories or files tracked by Git, never removes Docker volumes, and never stops system processes or other users' processes.
 
 Snapshots are JSON files in `~/Library/Application Support/org.agasthy.desktop/snapshots/` containing application, tool, package and repository metadata and environment variable *names* (never values). Update Labs live in `…/labs/` as Git worktrees of your projects.
 

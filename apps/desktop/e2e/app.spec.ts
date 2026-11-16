@@ -147,6 +147,33 @@ test.describe("with the fixture backend", () => {
     await expect(page.getByText("on this machine")).toBeVisible();
   });
 
+  test("agents page shows sessions, what they left running and their worktrees", async ({ page }) => {
+    await page.goto("/#/agents");
+    const card = page.getByRole("article", { name: "Claude Code session" });
+    await expect(card.getByText("fixture-widget")).toBeVisible();
+    await expect(card.getByText("1 MCP")).toBeVisible();
+    await expect(card.getByText(":5173")).toBeVisible();
+    await card.getByRole("button", { name: "2 processes started" }).click();
+    await expect(card.getByText("fixture vite")).toBeVisible();
+    const left = page.getByRole("region", { name: "Left running" });
+    await expect(left.getByText("Started by Codex CLI in /fixture/code/other", { exact: false })).toBeVisible();
+    await expect(page.getByText("3 uncommitted")).toBeVisible();
+    await expect(card.getByText("2.1M tokens", { exact: false })).toBeVisible();
+    await expect(card.getByText("≈$1.40", { exact: false })).toBeVisible();
+    await left.getByRole("button", { name: "Review stopping 1" }).click();
+    await expect(page.getByRole("dialog", { name: "Review action" })).toBeVisible();
+  });
+
+  test("token usage has its own page with totals, sessions and sources", async ({ page }) => {
+    await page.goto("/#/usage");
+    await expect(page.getByRole("navigation").getByRole("link", { name: "Token Usage" })).toBeVisible();
+    await expect(page.getByText("counters only, no message text", { exact: false })).toBeVisible();
+    await expect(page.getByRole("radio", { name: "30 days" })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByText("Sessions (1)")).toBeVisible();
+    await expect(page.getByRole("row", { name: /fixture-widget.*claude-opus-5-5.*\$1\.40/ })).toBeVisible();
+    await expect(page.getByRole("img", { name: /Daily token usage/ })).toBeVisible();
+  });
+
   test("snapshots list what is missing as commands, never values", async ({ page }) => {
     await page.goto("/#/snapshots");
     await page.getByRole("button", { name: "What's missing?" }).click();

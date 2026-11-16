@@ -26,6 +26,11 @@ pub const TOOLS: &[ToolSpec] = &[
         parameters: r#"{"type":"object","properties":{"by":{"type":"string","enum":["memory","cpu"]},"limit":{"type":"integer","minimum":1,"maximum":25}},"required":["by"]}"#,
     },
     ToolSpec {
+        name: "agent_sessions",
+        description: "Running coding-agent sessions (Claude Code, Codex, Gemini CLI, …) with each session's process tree, memory, ports, MCP and dev servers, and processes left running after an agent exited (with pid and start_time).",
+        parameters: r#"{"type":"object","properties":{}}"#,
+    },
+    ToolSpec {
         name: "listening_ports",
         description: "Processes listening on TCP ports (current user's processes). Optionally filter to one port.",
         parameters: r#"{"type":"object","properties":{"port":{"type":"integer"}}}"#,
@@ -72,7 +77,7 @@ pub const TOOLS: &[ToolSpec] = &[
     },
     ToolSpec {
         name: "propose_action",
-        description: "Propose a change for the user to review. Does NOT execute it. request is one of: {\"type\":\"terminate_process\",\"pid\":N,\"start_time\":N,\"force\":false}, {\"type\":\"quarantine_paths\",\"paths\":[...]} (paths must come from disk_cleanup_candidates with eligible=true), {\"type\":\"docker_prune\",\"target\":\"build_cache\"|\"dangling_images\"}.",
+        description: "Propose a change for the user to review. Does NOT execute it. request is one of: {\"type\":\"terminate_process\",\"pid\":N,\"start_time\":N,\"force\":false}, {\"type\":\"terminate_processes\",\"targets\":[{\"pid\":N,\"start_time\":N}]} (graceful stop of several processes, e.g. leftovers from agent_sessions), {\"type\":\"quarantine_paths\",\"paths\":[...]} (paths must come from disk_cleanup_candidates with eligible=true), {\"type\":\"docker_prune\",\"target\":\"build_cache\"|\"dangling_images\"}.",
         parameters: r#"{"type":"object","properties":{"request":{"type":"object"},"reason":{"type":"string"}},"required":["request","reason"]}"#,
     },
 ];
@@ -93,6 +98,11 @@ pub fn summarize(name: &str, v: &serde_json::Value) -> String {
     match name {
         "top_processes" => format!("{} processes", len("processes")),
         "listening_ports" => format!("{} listening processes", len("processes")),
+        "agent_sessions" => format!(
+            "{} sessions, {} left running",
+            len("sessions"),
+            len("leftovers")
+        ),
         "search" => format!("{} matches", len("results")),
         "repositories" => format!("{} repositories", len("repositories")),
         "disk_cleanup_candidates" => format!("{} candidates", len("candidates")),

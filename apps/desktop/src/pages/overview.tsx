@@ -1,6 +1,6 @@
 import type { DiskSample, Entity, EntityKind, KindCount, ProcessSample, ScanKind, ScanRecord, TelemetrySnapshot } from "@agasthy/shared-types";
 import { Badge, Button, Meter, StateView } from "@agasthy/ui";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, FolderPlus, RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { Avail } from "../components/availability";
@@ -237,7 +237,14 @@ function ProcTable({ rows, metric }: { rows: ProcessSample[]; metric: "memory" |
 
 function ProcessesPanel({ telemetry }: { telemetry?: TelemetrySnapshot }) {
   return (
-    <Panel title="Top processes" actions={<span className="text-[11px] text-faint">read-only · process management is a later phase</span>}>
+    <Panel
+      title="Top processes"
+      actions={
+        <Link to="/processes" className="text-[11px] text-accent hover:underline">
+          Manage in Processes
+        </Link>
+      }
+    >
       {!telemetry ? (
         <StateView kind="loading" title="Sampling processes" compact />
       ) : (

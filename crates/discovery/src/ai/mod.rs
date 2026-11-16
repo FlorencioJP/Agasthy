@@ -12,6 +12,7 @@ pub mod files;
 pub mod mcp;
 pub mod models;
 pub mod redact;
+pub mod usage;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::net::{SocketAddr, TcpStream};

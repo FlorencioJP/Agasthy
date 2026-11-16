@@ -10,6 +10,8 @@ use crate::tools::ToolHost;
 use crate::{OperatorAnswer, OperatorMode, Proposal, ToolStep, call_tool};
 
 pub const SUGGESTIONS: &[&str] = &[
+    "What are my coding agents doing?",
+    "Clean up after my agents",
     "What is using my RAM?",
     "What is using my CPU?",
     "Free 10 GB safely",
@@ -147,8 +149,28 @@ pub fn answer(question: &str, host: &dyn ToolHost) -> OperatorAnswer {
         proposals: vec![],
     };
 
-    let text = if has(&["free ", "clean", "disk space", "storage", "reclaim"]) && !has(&["docker"])
-    {
+    let agent_intent = has(&[
+        "agent",
+        "session",
+        "left running",
+        "leftover",
+        "orphan",
+        "claude code",
+        "codex",
+    ]) && !has(&["agents.md", "claude.md", "instruction", "installed", "mcp"]);
+    let text = if agent_intent {
+        agents(
+            &mut cx,
+            has(&[
+                "clean",
+                "stop",
+                "kill",
+                "leftover",
+                "left running",
+                "orphan",
+            ]),
+        )
+    } else if has(&["free ", "clean", "disk space", "storage", "reclaim"]) && !has(&["docker"]) {
         free_space(&mut cx, parse_amount(&q))
     } else if has(&["docker"]) {
         docker(&mut cx)
@@ -288,6 +310,99 @@ fn processes(cx: &mut Ctx, by: &str) -> String {
         ));
     }
     out.push_str("\nTo stop one, open it in Processes; AGASTHY will show a review before anything is stopped.");
+    out
+}
+
+fn agents(cx: &mut Ctx, cleanup: bool) -> String {
+    let v = cx.call("agent_sessions", json!({}));
+    if let Some(e) = error_of(&v) {
+        return format!("I could not read agent sessions: {e}");
+    }
+    let sessions = arr(&v, "sessions");
+    let leftovers = arr(&v, "leftovers");
+    let mut out = String::new();
+    if sessions.is_empty() {
+        out.push_str("No coding-agent sessions are running.\n");
+    } else {
+        let total: f64 = sessions.iter().filter_map(|s| n(s, "memory")).sum();
+        out.push_str(&format!(
+            "{} agent sessions are running, using {} in total:\n",
+            sessions.len(),
+            human_bytes(total)
+        ));
+        for ses in sessions {
+            let proj = match s(ses, "project") {
+                "" => s(ses, "cwd"),
+                p => p,
+            };
+            let mut extras = Vec::new();
+            for (k, label) in [
+                ("mcp_servers", "MCP"),
+                ("dev_servers", "dev server"),
+                ("children", "child processes"),
+            ] {
+                if let Some(c) = ses.get(k).and_then(|x| x.as_u64()).filter(|c| *c > 0) {
+                    extras.push(format!("{c} {label}"));
+                }
+            }
+            out.push_str(&format!(
+                "- {} (PID {}){} — {}{}\n",
+                s(ses, "agent"),
+                ses.get("pid").and_then(|x| x.as_u64()).unwrap_or(0),
+                if proj.is_empty() {
+                    String::new()
+                } else {
+                    format!(" in {proj}")
+                },
+                human_bytes(n(ses, "memory").unwrap_or(0.0)),
+                if extras.is_empty() {
+                    String::new()
+                } else {
+                    format!(", {}", extras.join(", "))
+                }
+            ));
+        }
+    }
+    let stoppable: Vec<&Value> = leftovers
+        .iter()
+        .filter(|l| s(l, "protected").is_empty())
+        .collect();
+    if leftovers.is_empty() {
+        out.push_str("\nNothing was left running by agents that have exited.");
+    } else {
+        out.push_str(&format!(
+            "\n{} processes are still running after their agent exited:\n",
+            leftovers.len()
+        ));
+        for l in leftovers.iter().take(15) {
+            let from = s(l, "agent");
+            out.push_str(&format!(
+                "- {} (PID {}), {}{}\n",
+                s(l, "name"),
+                l.get("pid").and_then(|x| x.as_u64()).unwrap_or(0),
+                human_bytes(n(l, "memory").unwrap_or(0.0)),
+                if from.is_empty() {
+                    " — parent exited, origin unknown".to_string()
+                } else {
+                    format!(" — started by {from}")
+                }
+            ));
+        }
+        if cleanup && !stoppable.is_empty() {
+            let targets: Vec<Value> = stoppable
+                .iter()
+                .map(|l| json!({"pid": l["pid"], "start_time": l["start_time"]}))
+                .collect();
+            let _ = cx.call(
+                "propose_action",
+                json!({"request": {"type": "terminate_processes", "targets": targets}, "reason": format!("Stop {} processes left running by exited agents", stoppable.len())}),
+            );
+        } else if !stoppable.is_empty() {
+            out.push_str(
+                "\nAsk \"Clean up after my agents\" for a reviewed proposal to stop them.",
+            );
+        }
+    }
     out
 }
 
@@ -746,6 +861,10 @@ mod tests {
                     "system": {"memory_used": 12.0 * GIB, "memory_total": 16.0 * GIB, "swap_used": GIB},
                     "processes": [{"name": "node", "pid": 42, "memory": 2.1 * GIB, "cpu": 50.0, "project": "~/code/web", "protected": ""}]
                 }),
+                "agent_sessions" => json!({
+                    "sessions": [{"agent": "Claude Code", "pid": 10, "project": "web", "memory": 0.5 * GIB, "mcp_servers": 1, "dev_servers": 0, "children": 2}],
+                    "leftovers": [{"name": "vite", "pid": 40, "start_time": 1040, "memory": 0.1 * GIB, "agent": "Claude Code", "protected": ""}]
+                }),
                 "listening_ports" => {
                     if args.get("port").and_then(|p| p.as_u64()) == Some(3000) {
                         json!({"processes": []})
@@ -784,6 +903,27 @@ mod tests {
                 _ => return Err("unexpected".into()),
             })
         }
+    }
+
+    #[test]
+    fn agents_and_cleanup() {
+        let a = answer("What are my coding agents doing?", &Host);
+        assert_eq!(a.steps[0].tool, "agent_sessions");
+        assert!(a.answer.contains("Claude Code (PID 10) in web"));
+        assert!(a.answer.contains("vite (PID 40)"));
+        assert!(
+            a.proposals.is_empty(),
+            "only proposes when asked to clean up"
+        );
+        let c = answer("Clean up after my agents", &Host);
+        assert_eq!(c.proposals.len(), 1);
+        assert_eq!(c.proposals[0].request["type"], "terminate_processes");
+        assert_eq!(c.proposals[0].request["targets"][0]["start_time"], 1040);
+        // Instruction-file questions still go to the AI ecosystem.
+        assert_eq!(
+            answer("Which AGENTS.md files are duplicated?", &Host).steps[0].tool,
+            "ai_ecosystem"
+        );
     }
 
     #[test]

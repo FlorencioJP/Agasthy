@@ -24,6 +24,7 @@ USAGE:
     agasthy shared --db FILE
     agasthy packages [--db FILE] [--full]
     agasthy telemetry
+    agasthy usage [--days N] [--full]      (coding-agent token usage from their local logs; counters only)
     agasthy processes [--db FILE]          (read-only; --db links processes to repositories)
     agasthy disk [folder...] [--db FILE]   (read-only cleanup analysis; folders act as approved roots)
     agasthy platform
@@ -182,6 +183,44 @@ fn run(raw: &[String]) -> Result<(), String> {
             println!(
                 "{}",
                 serde_json::to_string_pretty(&s).map_err(|e| e.to_string())?
+            );
+            return Ok(());
+        }
+        "usage" => {
+            let days: u32 = take_opt(&mut args, "--days")
+                .and_then(|d| d.parse().ok())
+                .unwrap_or(30);
+            let home = platform.home_dir().ok_or("no home directory")?;
+            let r = agasthy_discovery::ai::usage::UsageIndex::new().refresh(
+                &home,
+                days.clamp(1, 90),
+                agasthy_core::time::now_ms(),
+            );
+            let out = if full {
+                serde_json::to_value(&r).map_err(|e| e.to_string())?
+            } else {
+                let mut by_agent: std::collections::BTreeMap<
+                    String,
+                    (u64, agasthy_discovery::ai::usage::TokenCounts, Option<f64>),
+                > = Default::default();
+                for s in &r.sessions {
+                    let e = by_agent.entry(s.agent.clone()).or_default();
+                    e.0 += 1;
+                    e.1.add(&s.tokens);
+                    if let Some(c) = s.estimated_cost_usd {
+                        e.2 = Some(e.2.unwrap_or(0.0) + c);
+                    }
+                }
+                serde_json::json!({
+                    "window_days": r.window_days,
+                    "sources": r.sources,
+                    "problems": r.problems,
+                    "by_agent": by_agent.into_iter().map(|(a, (n, t, c))| serde_json::json!({"agent": a, "sessions": n, "tokens": t, "total_tokens": t.total(), "estimated_cost_usd": c.map(|c| (c * 100.0).round() / 100.0), "cost_note": if c.is_none() { "no price data for these models" } else { "API list prices; subscription plans are billed differently" }})).collect::<Vec<_>>(),
+                })
+            };
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?
             );
             return Ok(());
         }

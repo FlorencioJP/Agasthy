@@ -374,6 +374,32 @@ impl Host {
                 })),
                 other => Ok(json!({"available": false, "reason": unavailable_reason(&other)})),
             },
+            "agent_sessions" => {
+                let r = crate::agents::sample(&self.inner)?;
+                let proc_json = |p: &agasthy_process::agents::SessionProcess| {
+                    json!({"pid": p.pid, "start_time": p.start_time, "name": p.name, "role": p.role, "memory": p.memory_bytes,
+                           "cpu": p.cpu_percent, "ports": p.ports.iter().map(|x| x.port).collect::<Vec<_>>(),
+                           "protected": p.protected.clone().unwrap_or_default()})
+                };
+                Ok(json!({
+                    "sessions": r.sessions.iter().map(|s| json!({
+                        "agent": s.label, "pid": s.root.pid, "start_time": s.root.start_time,
+                        "project": s.project.as_ref().map(|p| p.name.clone()).unwrap_or_default(),
+                        "cwd": s.cwd, "host": s.host, "memory": s.total_memory_bytes, "cpu": s.total_cpu_percent,
+                        "children": s.children.len(), "mcp_servers": s.mcp_servers, "dev_servers": s.dev_servers,
+                        "ports": s.ports.iter().map(|x| x.port).collect::<Vec<_>>(),
+                        "processes": s.children.iter().take(20).map(proc_json).collect::<Vec<_>>(),
+                    })).collect::<Vec<_>>(),
+                    "leftovers": r.leftovers.iter().map(|l| {
+                        let mut v = proc_json(&l.process);
+                        v["agent"] = json!(l.agent_label.clone().unwrap_or_default());
+                        v["origin"] = json!(l.origin);
+                        v["project"] = json!(l.project.as_ref().map(|p| p.name.clone()));
+                        v
+                    }).collect::<Vec<_>>(),
+                    "tracking_since": r.tracking_since,
+                }))
+            }
             "propose_action" => self.propose(args),
             _ => Err(format!("unknown tool `{name}`")),
         }
@@ -445,10 +471,10 @@ impl Host {
             .to_string();
         if !matches!(
             kind.as_str(),
-            "terminate_process" | "quarantine_paths" | "docker_prune"
+            "terminate_process" | "terminate_processes" | "quarantine_paths" | "docker_prune"
         ) {
             return Err(
-                "the Operator can only propose terminate_process, quarantine_paths or docker_prune"
+                "the Operator can only propose terminate_process, terminate_processes, quarantine_paths or docker_prune"
                     .into(),
             );
         }

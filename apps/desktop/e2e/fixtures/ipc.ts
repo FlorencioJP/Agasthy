@@ -297,6 +297,50 @@ export async function installFixtureIpc(page: Page): Promise<void> {
       supported: 1,
       unsupported: 1,
     };
+    const sp = (pid: number, name: string, role: string, mem: number, ports: number[] = []) => ({
+      pid, start_time: 1000 + pid, parent_pid: 10, name, command: `fixture ${name}`, role, memory_bytes: mem, cpu_percent: 1,
+      ports: ports.map((port) => ({ address: "127.0.0.1", port })), cwd: "/fixture/code/fixture-widget", run_time_secs: 3600, protected: null,
+    });
+    responses.agent_report = {
+      taken_at: now,
+      tracking_since: now - 600_000,
+      port_data_available: true,
+      total_memory_bytes: 600 * 1024 ** 2,
+      sessions: [
+        {
+          id: "claude-code:10:1010", agent: "claude-code", label: "Claude Code", recognised: true, root: sp(10, "claude", "agent", 400 * 1024 ** 2),
+          cwd: "/fixture/code/fixture-widget", project: { id: repo.id, name: "fixture-widget", via: "working directory" }, host: "Terminal",
+          children: [sp(11, "rea mcp", "mcp_server", 50 * 1024 ** 2), sp(12, "vite", "dev_server", 150 * 1024 ** 2, [5173])],
+          total_memory_bytes: 600 * 1024 ** 2, total_cpu_percent: 3, ports: [{ address: "127.0.0.1", port: 5173 }], mcp_servers: 1, dev_servers: 1, nested_agents: 0,
+        },
+      ],
+      leftovers: [
+        { process: sp(40, "next-server", "dev_server", 200 * 1024 ** 2, [3000]), origin: "seen_in_session", agent_label: "Codex CLI", session_cwd: "/fixture/code/other", project: null, agent_exited_at: now - 1_200_000 },
+      ],
+    };
+    const today = new Date().toISOString().slice(0, 10);
+    const tk = (input: number, output: number, cache_read: number, requests: number) => ({ input, output, cache_write: 0, cache_read, requests });
+    responses.agent_usage = {
+      window_days: 30,
+      files_read: 2,
+      problems: [],
+      sources: [{ agent: "claude-code", path: "/fixture/home/.claude/projects", found: true }],
+      sessions: [
+        {
+          agent: "claude-code", session_id: "fixture-session", cwd: "/fixture/code/fixture-widget", first_at: now - 3_000_000, last_at: now,
+          tokens: tk(1000, 50_000, 2_000_000, 120), models: [{ model: "claude-opus-5-5", tokens: tk(1000, 50_000, 2_000_000, 120), estimated_cost_usd: 1.4 }],
+          estimated_cost_usd: 1.4, cost_partial: false,
+        },
+      ],
+      days: [{ day: today, agent: "claude-code", cwd: "/fixture/code/fixture-widget", model: "claude-opus-5-5", tokens: tk(1000, 50_000, 2_000_000, 120), estimated_cost_usd: 1.4 }],
+    };
+    responses.agent_worktrees = {
+      repos_checked: 1,
+      problems: [],
+      worktrees: [
+        { repo_id: repo.id, repo_name: "fixture-widget", path: "/fixture/code/fixture-widget/.claude/worktrees/fix-login", branch: "fix-login", head: "abc123", locked: false, prunable: false, created_by: "Claude Code", changed_files: 3, active_agents: [], modified_at: now - 7_200_000 },
+      ],
+    };
     responses.operator_settings = {
       presets: [
         { id: "ollama", name: "Ollama (local)", kind: "openai_compatible", base_url: "http://127.0.0.1:11434/v1", default_model: "fixture-model", needs_key: false },

@@ -109,6 +109,7 @@ dependencies = [
  "agasthy-core",
  "agasthy-platform",
  "agasthy-provenance",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2",

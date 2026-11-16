@@ -21,6 +21,10 @@ pub struct Inner {
     pub gpus: OnceLock<Availability<Vec<GpuInfo>>>,
     pub running: Mutex<HashSet<ScanKind>>,
     pub processes: Mutex<ProcessMonitor>,
+    /// Remembers agent sessions' processes to recognise what they leave behind.
+    pub agents: Mutex<agasthy_process::agents::AgentTracker>,
+    /// Incremental reader over coding agents' local usage logs (counters only).
+    pub usage: Mutex<agasthy_discovery::ai::usage::UsageIndex>,
     pub quarantine: Quarantine,
     pub engine: ActionEngine,
     /// The latest disk analysis; cleanup plans may only target its candidates.
@@ -59,6 +63,8 @@ impl AppState {
             gpus: OnceLock::new(),
             running: Mutex::new(HashSet::new()),
             processes: Mutex::new(ProcessMonitor::new()),
+            agents: Mutex::new(agasthy_process::agents::AgentTracker::new()),
+            usage: Mutex::new(agasthy_discovery::ai::usage::UsageIndex::new()),
             quarantine,
             engine: ActionEngine::new(),
             analysis: Mutex::new(None),
