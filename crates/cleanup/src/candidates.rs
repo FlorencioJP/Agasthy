@@ -499,7 +499,7 @@ mod tests {
         let find = |suffix: &str| {
             a.candidates
                 .iter()
-                .find(|c| c.path.ends_with(suffix))
+                .find(|c| Path::new(&c.path).ends_with(suffix))
                 .unwrap_or_else(|| panic!("{suffix}"))
         };
         let nm = find("web/node_modules");
@@ -545,12 +545,15 @@ mod tests {
                 ("web/node_modules/a", 1),
             ],
         );
-        let found: Vec<String> = repo_artifacts(&repo)
+        let found: Vec<PathBuf> = repo_artifacts(&repo)
             .into_iter()
-            .map(|(p, ..)| p.strip_prefix(&repo).unwrap().display().to_string())
+            .map(|(p, ..)| p.strip_prefix(&repo).unwrap().to_path_buf())
             .collect();
-        assert!(found.contains(&"target".to_string()), "{found:?}");
-        assert!(found.contains(&"web/node_modules".to_string()), "{found:?}");
+        assert!(found.contains(&PathBuf::from("target")), "{found:?}");
+        assert!(
+            found.contains(&Path::new("web").join("node_modules")),
+            "{found:?}"
+        );
     }
 
     #[test]
