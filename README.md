@@ -19,9 +19,6 @@ free disk space safely, and ask plain questions about your machine with evidence
   free and open source · no account · no telemetry
 </p>
 
-> [!NOTE]
-> **Please note: the first launch asks for your OK once.** AGASTHY is free and not yet signed with a paid Apple or Microsoft certificate, so your system shows a warning the first time. This is expected, and the [install steps](#install) show the one click to get past it. Every download is checksummed, built in public by [GitHub Actions](https://github.com/HMAKT99/Agasthy/actions), and in-app updates are signature-checked.
-
 https://github.com/user-attachments/assets/2718c8ae-1576-4c4f-a494-646731a019fa
 
 
@@ -217,3 +214,8 @@ Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_COND
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
+
+---
+
+> [!NOTE]
+> **Please note: the first launch asks for your OK once.** AGASTHY is free and not yet signed with a paid Apple or Microsoft certificate, so your system shows a warning the first time. This is expected, and the [install steps](#install) show the one click to get past it. Every download is checksummed, built in public by [GitHub Actions](https://github.com/HMAKT99/Agasthy/actions), and in-app updates are signature-checked.
