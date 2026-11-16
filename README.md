@@ -1,4 +1,3 @@
-
 <p align="center">
   <img src="apps/desktop/app-icon.svg" width="88" alt="AGASTHY mark" />
 </p>
