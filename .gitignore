@@ -14,3 +14,6 @@ apps/desktop/src-tauri/gen/
 *.db-shm
 .env
 .env.*
+
+# release artifacts
+/dist/

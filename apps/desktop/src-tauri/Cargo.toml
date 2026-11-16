@@ -37,3 +37,6 @@ tauri-plugin-opener = "2.7"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -7,6 +7,7 @@
 mod agents;
 mod background;
 mod commands;
+mod diag;
 mod insights;
 mod intel;
 mod operator;
@@ -28,7 +29,20 @@ pub fn run() {
                 .path()
                 .app_data_dir()
                 .map_err(|e| format!("could not resolve the app data directory: {e}"))?;
-            let state = state::AppState::open(data_dir)?;
+            let info = agasthy_platform::current().info();
+            diag::init(
+                &data_dir,
+                agasthy_platform::current().home_dir().as_deref(),
+                env!("CARGO_PKG_VERSION"),
+                &format!(
+                    "{} {} {}",
+                    info.os,
+                    info.os_version.unwrap_or_default(),
+                    info.arch
+                ),
+            );
+            let state = state::AppState::open(data_dir)
+                .inspect_err(|e| diag::write("error", &format!("could not open state: {e}")))?;
             agents::start_sampler(state.0.clone());
             background::start_scheduler(app.handle().clone(), state.0.clone());
             if let Err(e) = background::build_tray(app.handle(), state.0.clone()) {

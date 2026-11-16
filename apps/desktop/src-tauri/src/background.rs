@@ -117,12 +117,14 @@ pub fn start_scheduler(app: AppHandle, inner: Arc<Inner>) {
         .spawn(move || {
             std::thread::sleep(FIRST_CHECK_AFTER);
             loop {
-                if auto_refresh_enabled(&inner) {
-                    // In dependency order (packages before software, repositories before AI).
-                    for kind in due(&inner) {
-                        let _ = crate::commands::scan_now(&app, &inner, kind, "scheduler");
+                crate::state::guarded(&inner, "scan scheduler", || {
+                    if auto_refresh_enabled(&inner) {
+                        // In dependency order (packages before software, repositories before AI).
+                        for kind in due(&inner) {
+                            let _ = crate::commands::scan_now(&app, &inner, kind, "scheduler");
+                        }
                     }
-                }
+                });
                 std::thread::sleep(CHECK_EVERY);
             }
         })
@@ -219,7 +221,7 @@ pub fn build_tray(app: &AppHandle, inner: Arc<Inner>) -> tauri::Result<()> {
         .name("agasthy-tray".into())
         .spawn(move || {
             loop {
-                update_tray(&app2, &inner, &lines);
+                crate::state::guarded(&inner, "menu bar", || update_tray(&app2, &inner, &lines));
                 std::thread::sleep(REFRESH_TRAY);
             }
         })

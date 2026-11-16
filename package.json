@@ -17,7 +17,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "gen:types": "node scripts/gen-types.mjs",
-    "check:types": "node scripts/gen-types.mjs --check"
+    "check:types": "node scripts/gen-types.mjs --check",
+    "release:mac": "bash scripts/release-mac.sh"
   },
   "devDependencies": {
     "prettier": "3.10.1"

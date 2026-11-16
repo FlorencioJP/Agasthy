@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added (release readiness)
+- Background tasks recover from internal errors instead of stopping; shared state locks are recovered after a failure.
+- A page that fails to render shows an error with "Try again" instead of a blank window.
+- Local diagnostics log (`logs/agasthy.log`, rotated, home folder shown as `~`, never uploaded); Settings → About links to it.
+- `pnpm release:mac`: builds a DMG, signs and notarizes it when Apple Developer credentials are set, and writes a SHA-256 checksum.
+
 ### Added (Agent Control Center)
 - Agents page: live coding-agent sessions (Claude Code, Codex, Gemini CLI, Cursor Agent, Copilot CLI, Aider, OpenCode, Goose, Amp, Qwen Code, Hermes Agent, OpenClaw, Crush, Kilo Code), plus any process that starts MCP servers, with each session's process tree, memory, CPU, ports, MCP and dev servers, and host app.
 - Processes left running after an agent exited, attributed to the session that started them; one reviewed action stops them (new `terminate_processes` action, SIGTERM only).

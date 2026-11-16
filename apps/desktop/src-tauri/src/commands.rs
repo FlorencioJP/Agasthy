@@ -271,6 +271,12 @@ pub fn scan_now(
         let _guard = RunningGuard { inner, kind };
         execute_scan(app, inner, kind, actor)
     };
+    if let Err(e) = &result {
+        crate::diag::write(
+            "error",
+            &format!("{} scan ({actor}) failed: {e}", kind.as_str()),
+        );
+    }
     let stage = if result.is_ok() { "finished" } else { "failed" };
     let _ = app.emit(
         "scan-event",

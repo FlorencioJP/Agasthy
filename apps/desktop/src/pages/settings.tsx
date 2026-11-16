@@ -7,7 +7,7 @@ import { AiModelPanel } from "../components/ai-model-panel";
 import { Kv, PageHeader, Panel } from "../components/page";
 import { SCAN_LABELS, progressLabel, useScanActivity } from "../components/scan-activity";
 import { formatDateTime, formatNumber, formatRelative, shortenHome } from "../lib/format";
-import { api, errorMessage, pickFolder } from "../lib/ipc";
+import { api, errorMessage, pickFolder, revealInFileManager } from "../lib/ipc";
 import { useAppInfo, useAudit, useInvalidateData, useScanRoots, useScans } from "../lib/queries";
 
 export function SettingsPage() {
@@ -310,6 +310,15 @@ function AboutPanel() {
             ],
             ["Database", <code className="selectable font-mono text-[11.5px]">{info.data.db_path}</code>],
             ["Schema version", info.data.schema_version],
+            [
+              "Diagnostics log",
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="text-muted">Local only, never uploaded. Send it with a bug report.</span>
+                <Button size="sm" variant="ghost" onClick={() => void revealInFileManager(`${info.data.data_dir}/logs/agasthy.log`)}>
+                  Show in Finder
+                </Button>
+              </span>,
+            ],
           ]}
         />
       ) : null}

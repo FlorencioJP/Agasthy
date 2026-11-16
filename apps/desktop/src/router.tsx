@@ -1,4 +1,5 @@
 import { createHashHistory, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+import { PageError } from "./components/page-error";
 import { Shell } from "./components/shell";
 import { DiscoveryPage, type DiscoveryTab, TABS } from "./pages/discovery";
 import { AI_TABS, AiPage, type AiSearch, type AiTab } from "./pages/ai";
@@ -95,7 +96,8 @@ const privacyRoute = createRoute({ getParentRoute: () => rootRoute, path: "/priv
 const routeTree = rootRoute.addChildren([overviewRoute, discoveryRoute, graphRoute, aiRoute, processesRoute, storageRoute, securityRoute, impactRoute, snapshotsRoute, operatorRoute, agentsRoute, usageRoute, settingsRoute, privacyRoute]);
 
 // Hash history: the packaged app serves static files, so deep links must not hit the server.
-export const router = createRouter({ routeTree, history: createHashHistory() });
+// A page that fails to render shows an error in its place; the rest of the app keeps working.
+export const router = createRouter({ routeTree, history: createHashHistory(), defaultErrorComponent: PageError });
 
 declare module "@tanstack/react-router" {
   interface Register {

@@ -36,6 +36,8 @@ AGASTHY never scans your whole disk. Repository discovery only looks inside fold
 
 ## Stores
 
+A diagnostics log (`logs/agasthy.log` in the app data folder, at most about 4 MB) records start-up (version and OS), crashes, failed scans and failed background tasks, with your home folder written as `~`. It is never uploaded; Settings → About shows where it is so you can attach it to a bug report.
+
 API keys for AI providers are stored only in the operating system's credential store (macOS Keychain, Windows Credential Manager, the Linux kernel keyring), under the service `org.agasthy.desktop`. They are never written to AGASTHY's database, logs or files. The chosen provider, endpoint and model are stored in the database.
 
 A single SQLite database:

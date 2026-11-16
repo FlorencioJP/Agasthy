@@ -63,7 +63,9 @@ pub fn start_sampler(inner: Arc<Inner>) {
         .name("agasthy-agent-sampler".into())
         .spawn(move || {
             loop {
-                let _ = sample(&inner);
+                crate::state::guarded(&inner, "agent sampler", || {
+                    let _ = sample(&inner);
+                });
                 std::thread::sleep(SAMPLE_EVERY);
             }
         })

@@ -37,6 +37,35 @@ pub struct Inner {
 #[derive(Clone)]
 pub struct AppState(pub Arc<Inner>);
 
+impl Inner {
+    /// If a panic happened while a lock was held, the lock is "poisoned" and
+    /// every later use would fail. Everything behind these locks is a cache or
+    /// is re-validated before use (the database has its own transactions), so
+    /// clearing the flag lets the app keep working after a bug.
+    pub fn recover_locks(&self) {
+        self.store.clear_poison();
+        self.monitor.clear_poison();
+        self.running.clear_poison();
+        self.processes.clear_poison();
+        self.agents.clear_poison();
+        self.last_agents.clear_poison();
+        self.usage.clear_poison();
+        self.analysis.clear_poison();
+    }
+}
+
+/// Run one iteration of a background loop. A panic is caught and logged, and
+/// shared locks are recovered, so one bug cannot stop the loop or the app.
+pub fn guarded(inner: &Inner, name: &str, f: impl FnOnce()) {
+    if std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).is_err() {
+        crate::diag::write(
+            "error",
+            &format!("background task `{name}` failed; it will run again on its next interval"),
+        );
+    }
+    inner.recover_locks();
+}
+
 impl AppState {
     pub fn open(data_dir: PathBuf) -> Result<Self, String> {
         let db_path = data_dir.join("agasthy.db");
@@ -75,5 +104,21 @@ impl AppState {
             labs: LabStore::new(data_dir_labs)
                 .map_err(|e| format!("could not create the Update Lab folder: {e}"))?,
         })))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn a_panic_does_not_poison_the_app() {
+        let dir = tempfile::tempdir().unwrap();
+        let st = super::AppState::open(dir.path().to_path_buf()).unwrap();
+        let inner = st.0.clone();
+        super::guarded(&st.0, "test", || {
+            let _held = inner.usage.lock().unwrap();
+            panic!("simulated bug while holding a lock");
+        });
+        assert!(st.0.usage.lock().is_ok(), "lock recovered after the panic");
+        assert!(st.0.store.lock().is_ok());
     }
 }
