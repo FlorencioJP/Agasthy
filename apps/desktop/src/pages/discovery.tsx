@@ -44,7 +44,15 @@ export const KIND_LABEL: Record<EntityKind, { short: string; provenance: string 
   package: { short: "Package", provenance: "Installed through a package manager" },
   package_manager: { short: "Manager", provenance: "Package manager whose inventory AGASTHY read" },
   dependency: { short: "Dependency", provenance: "Declared in a project manifest (not necessarily installed)" },
+  ai_tool: { short: "AI tool", provenance: "AI assistant or engine found on this machine" },
+  ai_provider: { short: "Provider", provenance: "AI provider referenced or configured on this machine" },
+  local_model: { short: "Model", provenance: "Model stored on disk for local inference" },
+  mcp_server: { short: "MCP", provenance: "MCP server declared in a configuration file" },
+  ai_config_file: { short: "AI file", provenance: "AI instruction or configuration file" },
 };
+
+/** Kinds shown on the AI Ecosystem page rather than in Discovery. */
+export const AI_KINDS: EntityKind[] = ["ai_tool", "ai_provider", "local_model", "mcp_server", "ai_config_file"];
 
 export function tabForKind(kind: EntityKind): DiscoveryTab {
   return TABS.find((t) => t.kinds.includes(kind))?.id ?? "repositories";
@@ -434,7 +442,11 @@ export function DiscoveryPage() {
           <EntityDetailPanel
             id={selected}
             onClose={() => void nav({ search: (s) => ({ ...s, id: undefined }) })}
-            onNavigate={(id, kind) => void nav({ search: { tab: tabForKind(kind), id } })}
+            onNavigate={(id, kind) =>
+              AI_KINDS.includes(kind)
+                ? void nav({ to: "/ai", search: { tab: "overview", id } })
+                : void nav({ search: { tab: tabForKind(kind), id } })
+            }
             actions={
               <Button
                 size="sm"

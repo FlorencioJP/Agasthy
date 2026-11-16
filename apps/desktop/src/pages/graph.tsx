@@ -16,7 +16,12 @@ import {
 } from "@xyflow/react";
 import {
   AppWindow,
+  Bot,
   Box,
+  Brain,
+  Cloud,
+  FileText,
+  Plug,
   Boxes,
   Cpu,
   Crosshair,
@@ -36,7 +41,7 @@ import { useGraphNeighborhood, useGraphOverview, useOverview, useSharedDependenc
 import { KIND_LABEL } from "./discovery";
 import { EntityDetailPanel } from "./entity-detail";
 
-export type GraphMode = "projects" | "software" | "focus";
+export type GraphMode = "projects" | "software" | "ai" | "focus";
 
 export interface GraphSearch {
   view: GraphMode;
@@ -54,6 +59,11 @@ export const KIND_STYLE: Record<EntityKind, { color: string; icon: ComponentType
   package: { color: "#d97ab3", icon: Package },
   package_manager: { color: "#d97ab3", icon: Boxes },
   dependency: { color: "#5fb3b3", icon: Box },
+  ai_tool: { color: "#e0795b", icon: Bot },
+  ai_provider: { color: "#c9a227", icon: Cloud },
+  local_model: { color: "#7aa35a", icon: Brain },
+  mcp_server: { color: "#5b8def", icon: Plug },
+  ai_config_file: { color: "#a58b6f", icon: FileText },
 };
 
 const REL_SHORT: Record<RelationKind, string> = {
@@ -66,9 +76,31 @@ const REL_SHORT: Record<RelationKind, string> = {
   installed_by: "installed by",
   depends_on: "depends on",
   requires_runtime: "requires",
+  contains: "contains",
+  configures_tool: "read by",
+  declares_mcp_server: "declares",
+  uses_mcp_server: "uses MCP",
+  uses_provider: "uses",
+  serves_model: "serves",
+  same_content: "identical",
+  potential_conflict: "conflicts?",
+  references: "imports",
 };
 
-const FILTERABLE: EntityKind[] = ["repository", "dependency", "runtime", "binary", "package", "application", "remote_project"];
+const FILTERABLE: EntityKind[] = [
+  "repository",
+  "dependency",
+  "runtime",
+  "binary",
+  "package",
+  "application",
+  "remote_project",
+  "ai_tool",
+  "ai_provider",
+  "mcp_server",
+  "ai_config_file",
+  "local_model",
+];
 
 type EntityNodeData = { node: GraphNode; center: boolean };
 
@@ -253,7 +285,7 @@ export function GraphPage() {
   const [kinds, setKinds] = useState<EntityKind[]>([]);
   const overviewStats = useOverview();
   const mode = search.view;
-  const overview = useGraphOverview(mode === "software" ? "software" : "projects", mode !== "focus");
+  const overview = useGraphOverview(mode === "software" ? "software" : mode === "ai" ? "ai" : "projects", mode !== "focus");
   const focus = useGraphNeighborhood(mode === "focus" ? (search.focus ?? null) : null, search.depth, kinds);
   const q = mode === "focus" ? focus : overview;
   const view = q.data;
@@ -276,6 +308,7 @@ export function GraphPage() {
             [
               ["projects", "Projects", Layers],
               ["software", "Installed software", Package],
+              ["ai", "AI ecosystem", Bot],
               ["focus", "Focus", Crosshair],
             ] as const
           ).map(([id, label, Icon]) => (
@@ -410,6 +443,14 @@ function EmptyGraph({ mode, repoCount }: { mode: GraphMode; repoCount: number })
             Choose folders
           </Button>
         }
+      />
+    );
+  if (mode === "ai")
+    return (
+      <StateView
+        kind="empty"
+        title="No AI ecosystem data yet"
+        description="Run the AI ecosystem scan from the AI Ecosystem page to map assistants, providers, MCP servers and instruction files."
       />
     );
   if (mode === "software")

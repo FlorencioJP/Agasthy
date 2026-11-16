@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-edges"
+description = "Enables the list_edges command without any pre-configured scope."
+commands.allow = ["list_edges"]
+
+[[permission]]
+identifier = "deny-list-edges"
+description = "Denies the list_edges command without any pre-configured scope."
+commands.deny = ["list_edges"]

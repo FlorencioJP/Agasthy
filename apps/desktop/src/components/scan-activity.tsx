@@ -10,7 +10,7 @@ interface Activity {
   start: (kind: ScanKind) => Promise<ScanRecord | null>;
   /** Packages first, so the software scan can link binaries to packages. */
   startInventory: () => Promise<void>;
-  /** Inventory, then repositories, so projects can link to the runtimes found. */
+  /** Inventory, then repositories (linking to runtimes), then AI (reading project AI files). */
   startAll: () => Promise<void>;
 }
 
@@ -69,6 +69,7 @@ export function ScanActivityProvider({ children }: { children: ReactNode }) {
   const startAll = useCallback(async () => {
     await startInventory();
     await start("repositories");
+    await start("ai");
   }, [start, startInventory]);
 
   const value = useMemo(
@@ -88,6 +89,7 @@ export const SCAN_LABELS: Record<ScanKind, string> = {
   repositories: "Repositories",
   software: "Applications & tools",
   packages: "Packages",
+  ai: "AI ecosystem",
 };
 
 export function progressLabel(p: ScanProgress | undefined): string {
@@ -98,6 +100,11 @@ export function progressLabel(p: ScanProgress | undefined): string {
     applications: "Reading applications",
     tools: "Probing tools",
     packages: "Reading",
+    "ai-tools": "Finding AI tools",
+    "ai-files": "Reading AI files",
+    "ai-mcp": "Reading MCP configuration",
+    "ai-models": "Finding local models",
+    "ai-analysis": "Checking duplicates and conflicts",
     done: "Saving",
   };
   const base = phase[p.phase] ?? p.phase;

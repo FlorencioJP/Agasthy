@@ -20,6 +20,7 @@ const COMMANDS: &[&str] = &[
     "graph_overview",
     "runtime_impact",
     "shared_dependencies",
+    "list_edges",
 ];
 
 fn main() {

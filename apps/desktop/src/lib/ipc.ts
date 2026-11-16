@@ -1,6 +1,8 @@
 import type {
   AppInfo,
   EntityKind,
+  Edge,
+  RelationKind,
   AuditEntry,
   Availability,
   Entity,
@@ -64,6 +66,7 @@ export const api = {
   graphOverview: (kind: OverviewKind) => invoke<GraphView>("graph_overview", { kind }),
   runtimeImpact: (id: string) => invoke<ImpactReport | null>("runtime_impact", { id }),
   sharedDependencies: (limit?: number) => invoke<SharedDependency[]>("shared_dependencies", { limit }),
+  listEdges: (kind: RelationKind) => invoke<Edge[]>("list_edges", { kind }),
 };
 
 export async function onScanEvent(handler: (e: ScanEvent) => void): Promise<() => void> {

@@ -20,7 +20,8 @@ AGASTHY runs with the user's privileges and inspects their machine, so the bound
 - **Untrusted input.** Repository files, command output and plist contents are treated as data: size-capped, parsed, never executed.
 - **Filesystem bounds.** Scan roots are canonicalised and checked against protected locations; walks never follow symlinks and are bounded.
 - **Secrets.** Credentials embedded in Git remote URLs are stripped before storage or display.
-- **No network.** v0.1.0 makes no network requests of its own.
+- **No internet access.** v0.1.0 makes no internet requests. The AI scan only opens TCP connections to `127.0.0.1` on local inference engines' ports to see whether they are running.
+- **AI configuration.** Credential files are checked for existence only and never opened; environment variables are checked by name only; instruction text is redacted before storage; AI instruction files are treated as untrusted data and never executed or followed.
 - **Read-only.** v0.1.0 has no actions that modify the machine. Later mutation features will be typed, approval-gated, dry-run-first and audited.
 - **Webview capabilities.** The Tauri capability file grants only AGASTHY's own commands, the folder picker and reveal-in-file-manager.
 

@@ -43,6 +43,7 @@ pub fn run() {
             commands::graph_overview,
             commands::runtime_impact,
             commands::shared_dependencies,
+            commands::list_edges,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AGASTHY");

@@ -75,6 +75,7 @@ export async function installFixtureIpc(page: Page): Promise<void> {
         recent: [repo],
         latest_scans: [
           { id: 1, kind: "repositories", status: "completed", started_at: now - 5000, finished_at: now - 4000, entities_found: 1, entities_removed: 0, issues: [] },
+          { id: 2, kind: "ai", status: "completed", started_at: now - 3000, finished_at: now - 2000, entities_found: 3, entities_removed: 0, issues: [] },
         ],
         scan_roots: 1,
         dirty_repositories: 1,
@@ -138,13 +139,70 @@ export async function installFixtureIpc(page: Page): Promise<void> {
       unknown: 0,
       limitations: ["fixture limitation"],
     };
+    const aiTool = {
+      id: "ai_tool:fixture-assistant",
+      kind: "ai_tool",
+      name: "Fixture Assistant",
+      path: "/fixture/bin/assistant",
+      version: "1.0.0",
+      source: "ai",
+      attributes: {
+        tool: "fixture-assistant",
+        vendor: "Fixture Vendor",
+        category: "cli",
+        installed: true,
+        signals: [{ kind: "binary", path: "/fixture/bin/assistant", detail: null }],
+        local_endpoint: null,
+      },
+      first_seen: now,
+      last_seen: now,
+    };
+    const fileAttrs = (name: string, text: string) => ({
+      file_type: "instructions",
+      scope: "project",
+      tools: ["fixture-assistant"],
+      project: "/fixture/code/fixture-widget",
+      relative_path: name,
+      size_bytes: 40,
+      modified_at: now,
+      sha256: "0".repeat(64),
+      lines: 2,
+      headings: ["Fixture"],
+      text,
+      text_truncated: false,
+      redactions: 0,
+      orphaned: false,
+      duplicates: [],
+      overlaps: [],
+      directives: [],
+      references: [],
+    });
+    const fileA = {
+      id: "ai_file:/fixture/code/fixture-widget/AGENTS.md",
+      kind: "ai_config_file",
+      name: "AGENTS.md",
+      path: "/fixture/code/fixture-widget/AGENTS.md",
+      version: null,
+      source: "ai",
+      attributes: fileAttrs("AGENTS.md", "# Fixture\nUse fixture-pm for installs.\n"),
+      first_seen: now,
+      last_seen: now,
+    };
+    const fileB = { ...fileA, id: "ai_file:/fixture/home/GLOBAL.md", name: "GLOBAL.md", path: "/fixture/home/GLOBAL.md", attributes: { ...fileAttrs("GLOBAL.md", "x"), scope: "global", project: null } };
+    responses.list_edges = [
+      { id: "c1", kind: "potential_conflict", from_id: fileA.id, to_id: fileB.id, confidence: "probable", attributes: { topic: "package_manager" } },
+    ];
+    const byKind: Record<string, unknown[]> = { repository: [repo], ai_tool: [aiTool], ai_config_file: [fileA, fileB] };
     window.__AGASTHY_TEST_IPC__ = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
-      if (cmd === "entity_detail" && args?.id === runtime.id) {
-        return { entity: runtime, evidence: [], outgoing: [], incoming: [] } as T;
-      }
       if (cmd === "list_entities") {
         const q = (args?.query ?? {}) as { kind?: string | null };
-        return (q.kind === "repository" || q.kind == null ? [repo] : []) as T;
+        return (q.kind ? (byKind[q.kind] ?? []) : [repo]) as T;
+      }
+      if (cmd === "entity_detail" && args?.id === fileA.id) {
+        return { entity: fileA, evidence: [], outgoing: [], incoming: [] } as T;
+      }
+      if (cmd === "entity_detail" && args?.id === runtime.id) {
+        return { entity: runtime, evidence: [], outgoing: [], incoming: [] } as T;
       }
       if (cmd in responses) return responses[cmd] as T;
       throw `fixture: no response for ${cmd}`;

@@ -242,4 +242,12 @@ fn ids_map_to_kinds() {
         Some(EntityKind::RemoteProject)
     );
     assert_eq!(kind_of_id("nonsense"), None);
+    assert_eq!(
+        kind_of_id("ai_file:/x/CLAUDE.md"),
+        Some(EntityKind::AiConfigFile)
+    );
+    assert_eq!(
+        kind_of_id("mcp:/x/.mcp.json#global#fs"),
+        Some(EntityKind::McpServer)
+    );
 }

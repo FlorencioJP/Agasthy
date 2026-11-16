@@ -22,8 +22,12 @@ export function PrivacyPage() {
       <div className="flex max-w-4xl flex-col gap-4 p-5">
         <Panel title="Transmits">
           <div className="flex flex-col gap-3">
-            <Item title="AGASTHY itself makes no network requests in this build.">
+            <Item title="AGASTHY makes no internet requests in this build.">
               No account, no telemetry, no analytics, no update checks. Nothing about your machine, your code or your configuration is uploaded.
+            </Item>
+            <Item title="Local ports only, for local AI engines.">
+              When an installed local inference engine is found (Ollama, LM Studio, Jan, vLLM, LocalAI), the AI scan opens a TCP connection to its port on{" "}
+              <code className="font-mono">127.0.0.1</code> to see whether it is running, then closes it. No data is sent. Cloud providers are never contacted.
             </Item>
             <Item title="Tools it runs may use their own caches.">
               AGASTHY runs package managers to list what they installed. It sets opt-outs such as <code className="font-mono">HOMEBREW_NO_AUTO_UPDATE</code>,{" "}
@@ -46,6 +50,13 @@ export function PrivacyPage() {
             <Item title="Command-line tools">
               Whether a catalogued tool exists in the directories below, and the output of its version command.
             </Item>
+            <Item title="AI configuration">
+              Fixed locations in your home folder (for example <code className="font-mono">~/.claude</code>, <code className="font-mono">~/.codex</code>,{" "}
+              <code className="font-mono">~/.cursor</code>, <code className="font-mono">~/.gemini</code>, Claude Desktop's config), editor extension folder
+              names, local model directories, and AI instruction files inside repositories you scanned. Credential files (such as{" "}
+              <code className="font-mono">~/.codex/auth.json</code>) are checked for existence only and never opened. Of environment variables, only the names
+              are checked.
+            </Item>
             <Item title="System resources">CPU, memory, swap, disk and process statistics from the operating system, sampled while the app is open.</Item>
           </div>
         </Panel>
@@ -54,6 +65,11 @@ export function PrivacyPage() {
             <Item title="A local SQLite database">
               {info.data ? <code className="selectable font-mono text-[12px] text-fg">{info.data.db_path}</code> : "In the application data folder."} It holds scan
               results, the evidence behind them, your folder list and an append-only audit log. Delete the file to remove everything.
+            </Item>
+            <Item title="AI instruction text, redacted">
+              Up to 16 KB of each instruction, rules, agent, skill or command file is stored for search and preview, after credential-like values are
+              redacted. Configuration files (settings, MCP configs) are parsed for server names and commands; their contents are not stored, and
+              environment values passed to MCP servers are never stored, only their names.
             </Item>
             <Item title="Secrets are not stored">
               Credentials embedded in Git remote URLs (for example <code className="font-mono">https://user:token@host/…</code>) are removed before anything is

@@ -16,6 +16,7 @@ serde_json.workspace = true
 ts-rs = { workspace = true, features = ["serde-json-impl"] }
 walkdir.workspace = true
 toml.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

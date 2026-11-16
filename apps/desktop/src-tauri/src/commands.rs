@@ -6,12 +6,12 @@
 use std::path::PathBuf;
 
 use agasthy_core::{
-    AuditEntry, Availability, Entity, EntityDetail, EntityKind, EntityQuery, IssueKind, KindCount,
-    RelationKind, ScanIssue, ScanKind, ScanRecord, ScanRoot,
+    AuditEntry, Availability, Edge, Entity, EntityDetail, EntityKind, EntityQuery, IssueKind,
+    KindCount, RelationCount, RelationKind, ScanIssue, ScanKind, ScanRecord, ScanRoot,
 };
 use agasthy_discovery::{
-    RepoScanOptions, ScanProgress, runtime_copies, scan_packages, scan_repositories, scan_software,
-    validate_scan_root,
+    AiScanOptions, RepoScanOptions, ScanProgress, runtime_copies, scan_ai, scan_packages,
+    scan_repositories, scan_software, validate_scan_root,
 };
 use agasthy_graph::{GraphView, ImpactReport, OverviewKind, SharedDependency};
 use agasthy_platform::{GpuInfo, PlatformInfo, SearchDirOrigin};
@@ -120,6 +120,7 @@ pub struct Overview {
     pub dirty_repositories: u32,
     pub duplicate_clone_links: u32,
     pub binaries_installed_by_package: u32,
+    pub relationship_counts: Vec<RelationCount>,
 }
 
 #[tauri::command]
@@ -137,6 +138,7 @@ pub fn overview(state: State<'_, AppState>) -> CmdResult<Overview> {
             )?,
             duplicate_clone_links: s.count_relationships(RelationKind::DuplicateClone)?,
             binaries_installed_by_package: s.count_relationships(RelationKind::InstalledBy)?,
+            relationship_counts: s.relationship_counts()?,
         })
     })
 }
@@ -325,6 +327,27 @@ fn execute_scan(app: &AppHandle, inner: &Inner, kind: ScanKind) -> CmdResult<Sca
         }
         ScanKind::Software => scan_software(inner.platform.as_ref(), &inner.runner, &emit),
         ScanKind::Packages => scan_packages(inner.platform.as_ref(), &inner.runner, &emit),
+        ScanKind::Ai => {
+            // Project-level AI files are read only inside repositories already
+            // discovered in user-approved folders.
+            let projects = with_store(inner, |s| {
+                s.list_entities(&EntityQuery {
+                    kind: Some(EntityKind::Repository),
+                    text: None,
+                    limit: Some(5000),
+                    offset: None,
+                })
+            })?
+            .into_iter()
+            .filter_map(|e| e.path.map(|p| (e.id, PathBuf::from(p))))
+            .collect();
+            let home = inner
+                .platform
+                .home_dir()
+                .ok_or_else(|| "could not determine the home directory".to_string())?;
+            let opts = AiScanOptions::new(home, projects);
+            scan_ai(inner.platform.as_ref(), &opts, &emit)
+        }
     };
 
     with_store(inner, |s| {
@@ -380,6 +403,11 @@ pub fn list_scans(state: State<'_, AppState>, limit: Option<u32>) -> CmdResult<V
 #[tauri::command]
 pub fn list_audit(state: State<'_, AppState>, limit: Option<u32>) -> CmdResult<Vec<AuditEntry>> {
     with_store(&state.0, |s| s.list_audit(limit.unwrap_or(100).min(1000)))
+}
+
+#[tauri::command]
+pub fn list_edges(state: State<'_, AppState>, kind: RelationKind) -> CmdResult<Vec<Edge>> {
+    with_store(&state.0, |s| s.edges_of_kind(kind, None))
 }
 
 // ----- graph -----

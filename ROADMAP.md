@@ -55,12 +55,17 @@ A box is ticked only when the item is implemented **and** verified. Anything par
 
 ## Phase 3: AI ecosystem
 
-- [ ] AI coding assistant discovery by executable, app bundle and config directory evidence
-- [ ] Provider configuration discovery (presence only; secret values are never read into storage)
-- [ ] Local inference engines and models (Ollama, LM Studio, …)
-- [ ] Instruction files (AGENTS.md, CLAUDE.md, GEMINI.md, `.cursor/rules`, …): indexing, duplicates, overlaps
-- [ ] MCP server configuration discovery
-- [ ] AI ecosystem dashboard
+- [x] AI tool discovery (21 tools) by executable, app bundle (bundle id preferred over name), editor extension and config directory; config-only tools are not claimed as installed
+- [x] Provider evidence levels: referenced → configured → endpoint configured → credential present → reachable (local only); credential files checked for existence only, env vars by name only
+- [x] Local inference engines with a 127.0.0.1 port check; local models from Ollama, LM Studio and the Hugging Face cache
+- [x] AI files: instructions, rules, agents, skills, commands, settings and MCP configs, global and per project, with scope (global / project / directory)
+- [x] Redacted, searchable instruction text; duplicates (SHA-256), overlaps, orphaned files, `@import` references
+- [x] Potential conflicts for explicit settings (package manager, indentation, quotes) between files that apply together, with line evidence
+- [x] MCP servers from Claude Code, Claude Desktop, Codex, Gemini CLI, Cursor, VS Code and Windsurf configs, with redacted args and env var names only
+- [x] AI Ecosystem page with question shortcuts; AI view in the Machine Graph
+- [ ] Windows and Linux locations for the same tools
+- [ ] JetBrains AI Assistant and other IDE plugins
+- [ ] Natural-language questions (Phase 6, AI operator)
 
 ## Phase 4: System operations
 

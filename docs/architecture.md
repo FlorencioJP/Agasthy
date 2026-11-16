@@ -60,6 +60,15 @@ The graph is the `entities` and `relationships` tables; there is no separate gra
 
 `depends_on` edges come from manifests (*verified*: the file states it). `requires_runtime` edges are *verified* when a version is declared and *probable* when use is only implied by a manifest's presence. Dependencies are declarations, not installations; the UI says so.
 
+## AI ecosystem discovery
+
+`agasthy-discovery::ai` builds one `IngestBatch` (scan kind `ai`):
+
+- **Tools**: a catalogue (`ai/catalog.rs`) of assistants, desktop apps and local engines, each detected from executables, application bundles (bundle identifier preferred over file name), VS Code-style extension folders and config paths. A tool with only configuration is recorded with `installed: false`.
+- **Providers**: evidence levels from built-in vendor ties, tool settings (names and keys only), environment variable *names*, and credential files' *existence*. Local engines get a `127.0.0.1` TCP check.
+- **Files**: fixed global locations plus a walk of each scanned repository that only enters known AI directories. Instruction-type text is redacted (`ai/redact.rs`) and capped; configuration files are parsed but not stored.
+- **Analysis**: SHA-256 duplicates, overlaps (several instruction files applying to one directory), orphaned files (no reader installed), `@import` references, and potential conflicts. Conflicts are only reported when two files that apply together each state exactly one value for the same setting, with no negation on the line.
+
 ## Safety boundaries
 
 **Command runner** (`crates/platform-adapters/src/command.rs`):

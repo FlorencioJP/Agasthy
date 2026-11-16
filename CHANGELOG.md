@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added (Phase 3)
+- AI ecosystem discovery: assistants, desktop AI apps and local inference engines with on-disk evidence; providers with evidence levels; local models; MCP servers; AI instruction, agent, skill, command, settings and MCP files.
+- Duplicate, overlap, orphan, `@import` and potential-conflict analysis for AI instruction files.
+- Secret redaction for stored instruction text and MCP arguments; credential files checked for existence only.
+- AI Ecosystem screen with question shortcuts; AI view in the Machine Graph; `agasthy ai` CLI command.
+
 ### Added (Phase 2)
 - Project dependency discovery from manifests and lockfiles across npm, Cargo, PyPI and Go, including nested packages in monorepos.
 - Runtime requirement discovery and `requires_runtime` links to the runtime copies on PATH.

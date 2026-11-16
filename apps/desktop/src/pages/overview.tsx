@@ -180,6 +180,8 @@ const ENV_KINDS: { kind: EntityKind; label: string }[] = [
   { kind: "runtime", label: "Runtimes" },
   { kind: "package", label: "Packages" },
   { kind: "package_manager", label: "Package managers" },
+  { kind: "ai_tool", label: "AI tools" },
+  { kind: "mcp_server", label: "MCP servers" },
 ];
 
 function EnvironmentPanel({ counts, dirty, dupes, roots }: { counts: KindCount[]; dirty: number; dupes: number; roots: number }) {
@@ -195,14 +197,18 @@ function EnvironmentPanel({ counts, dirty, dupes, roots }: { counts: KindCount[]
     return KIND_LABEL[k].provenance;
   };
   return (
-    <Panel title="Developer environment" bodyClassName="grid grid-cols-2 gap-1 p-1.5 md:grid-cols-3 xl:grid-cols-6">
+    <Panel title="Developer environment" bodyClassName="grid grid-cols-2 gap-1 p-1.5 md:grid-cols-4 xl:grid-cols-8">
       {ENV_KINDS.map(({ kind, label }) => (
         <Stat
           key={kind}
           label={label}
           value={formatNumber(count(kind))}
           hint={hint(kind)}
-          onClick={() => void nav({ to: "/discovery", search: { tab: tabForKind(kind) } })}
+          onClick={() =>
+            kind === "ai_tool" || kind === "mcp_server"
+              ? void nav({ to: "/ai", search: { tab: kind === "ai_tool" ? "assistants" : "mcp" } })
+              : void nav({ to: "/discovery", search: { tab: tabForKind(kind) } })
+          }
         />
       ))}
     </Panel>
@@ -358,7 +364,7 @@ function RecentPanel({ recent }: { recent: Entity[] }) {
 
 function ScanStatusPanel({ scans }: { scans: ScanRecord[] }) {
   const activity = useScanActivity();
-  const kinds: ScanKind[] = ["repositories", "software", "packages"];
+  const kinds: ScanKind[] = ["repositories", "software", "packages", "ai"];
   return (
     <Panel title="Scans">
       <ul className="divide-y divide-line">

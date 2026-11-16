@@ -19,7 +19,8 @@ test.describe("with the fixture backend", () => {
     await expect(nav.getByRole("link", { name: "Discovery" })).toBeVisible();
     // Only implemented sections are in the sidebar.
     await expect(nav.getByRole("link", { name: "Machine Graph" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "AI Ecosystem" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "AI Ecosystem" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Processes" })).toHaveCount(0);
 
     await expect(page.getByRole("meter", { name: "CPU" })).toHaveAttribute("aria-valuetext", "unavailable");
     await expect(page.getByRole("meter", { name: "Memory" })).toHaveAttribute("aria-valuenow", "25");
@@ -45,7 +46,7 @@ test.describe("with the fixture backend", () => {
 
   test("privacy page lists the command allowlist from the backend", async ({ page }) => {
     await page.goto("/#/privacy");
-    await expect(page.getByText("AGASTHY itself makes no network requests in this build.")).toBeVisible();
+    await expect(page.getByText("AGASTHY makes no internet requests in this build.")).toBeVisible();
     await expect(page.getByRole("list", { name: "Command allowlist" }).getByRole("listitem")).toHaveText(["git"]);
   });
 
@@ -60,5 +61,20 @@ test.describe("with the fixture backend", () => {
     await expect(impact.getByText("1 would break")).toBeVisible();
     await expect(impact.getByText("Would break", { exact: true })).toBeVisible();
     await expect(impact.getByText("package.json: >=20")).toBeVisible();
+  });
+
+  test("AI ecosystem answers questions from discovered evidence", async ({ page }) => {
+    await page.goto("/#/ai");
+    await expect(page.getByText("1 potential instruction conflict")).toBeVisible();
+    await page.getByRole("button", { name: "Which AI coding assistants are installed?" }).click();
+    await expect(page.getByRole("row", { name: /Fixture Assistant/ })).toContainText("installed");
+    await page.getByRole("tab", { name: "Instructions & config" }).click();
+    await page.getByRole("button", { name: /Potential conflicts/ }).click();
+    const row = page.getByRole("row", { name: /AGENTS\.md/ });
+    await expect(row).toBeVisible();
+    await row.click();
+    const details = page.getByRole("complementary", { name: "Details" });
+    await expect(details.getByText("Shown as data. AGASTHY never follows instructions in these files.", { exact: false })).toBeVisible();
+    await expect(details.getByText("Use fixture-pm for installs.", { exact: false })).toBeVisible();
   });
 });

@@ -48,6 +48,8 @@ pub enum OverviewKind {
     Projects,
     /// Package managers, their packages, and the binaries and apps those provide.
     Software,
+    /// AI assistants, providers, MCP servers, local models and instruction files.
+    Ai,
 }
 
 /// Infer an entity kind from its id prefix (ids are deterministic).
@@ -62,6 +64,11 @@ pub fn kind_of_id(id: &str) -> Option<EntityKind> {
         "package" => EntityKind::Package,
         "package_manager" => EntityKind::PackageManager,
         "dependency" => EntityKind::Dependency,
+        "ai_tool" => EntityKind::AiTool,
+        "ai_provider" => EntityKind::AiProvider,
+        "local_model" => EntityKind::LocalModel,
+        "mcp" => EntityKind::McpServer,
+        "ai_file" => EntityKind::AiConfigFile,
         _ => return None,
     })
 }
@@ -197,6 +204,27 @@ pub fn overview(store: &Store, kind: OverviewKind, max_nodes: usize) -> CoreResu
                     .filter(|(_, n)| *n >= 2)
                     .map(|(id, _)| id),
             );
+        }
+        OverviewKind::Ai => {
+            for k in [
+                EntityKind::AiTool,
+                EntityKind::AiProvider,
+                EntityKind::McpServer,
+                EntityKind::LocalModel,
+            ] {
+                ids.extend(all(k)?);
+            }
+            // Instruction files and the projects that contain them.
+            for k in [
+                RelationKind::ConfiguresTool,
+                RelationKind::Contains,
+                RelationKind::DeclaresMcpServer,
+            ] {
+                for e in store.edges_of_kind(k, None)? {
+                    ids.push(e.from_id);
+                    ids.push(e.to_id);
+                }
+            }
         }
         OverviewKind::Software => {
             ids.extend(all(EntityKind::PackageManager)?);

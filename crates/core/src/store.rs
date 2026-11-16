@@ -279,7 +279,7 @@ impl Store {
     pub fn recent_entities(&self, limit: u32) -> CoreResult<Vec<Entity>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, kind, name, path, version, source, attributes, first_seen, last_seen
-             FROM entities WHERE kind NOT IN ('remote_project', 'dependency')
+             FROM entities WHERE kind NOT IN ('remote_project', 'dependency', 'ai_config_file', 'mcp_server')
              ORDER BY first_seen DESC, name COLLATE NOCASE LIMIT ?1",
         )?;
         let rows = stmt.query_map([limit], entity_from_row)?;
@@ -409,6 +409,18 @@ impl Store {
             }
         }
         Ok(out)
+    }
+
+    pub fn relationship_counts(&self) -> CoreResult<Vec<RelationCount>> {
+        RelationKind::ALL
+            .into_iter()
+            .map(|kind| {
+                Ok(RelationCount {
+                    kind,
+                    count: self.count_relationships(kind)?,
+                })
+            })
+            .collect()
     }
 
     pub fn count_relationships(&self, kind: RelationKind) -> CoreResult<u32> {
@@ -670,6 +682,17 @@ fn scan_relationship_kinds(kind: ScanKind) -> &'static [RelationKind] {
             RelationKind::ManagedBy,
             RelationKind::UpstreamProject,
             RelationKind::Provides,
+        ],
+        ScanKind::Ai => &[
+            RelationKind::Contains,
+            RelationKind::ConfiguresTool,
+            RelationKind::DeclaresMcpServer,
+            RelationKind::UsesMcpServer,
+            RelationKind::UsesProvider,
+            RelationKind::ServesModel,
+            RelationKind::SameContent,
+            RelationKind::PotentialConflict,
+            RelationKind::References,
         ],
     }
 }

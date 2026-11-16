@@ -18,6 +18,7 @@ agasthy — read-only developer machine discovery
 USAGE:
     agasthy scan <folder>... [--depth N] [--db FILE] [--full]
     agasthy software [--db FILE] [--full]
+    agasthy ai [--db FILE] [--full]        (projects come from repositories in --db)
     agasthy impact <runtime-entity-id> --db FILE
     agasthy shared --db FILE
     agasthy packages [--db FILE] [--full]
@@ -94,6 +95,27 @@ fn run(raw: &[String]) -> Result<(), String> {
         }
         "software" => scan_software(platform.as_ref(), &runner, &agasthy_discovery::no_progress),
         "packages" => scan_packages(platform.as_ref(), &runner, &agasthy_discovery::no_progress),
+        "ai" => {
+            let projects = match &db {
+                Some(path) => Store::open(path)
+                    .and_then(|s| {
+                        s.list_entities(&agasthy_core::EntityQuery {
+                            kind: Some(agasthy_core::EntityKind::Repository),
+                            text: None,
+                            limit: Some(5000),
+                            offset: None,
+                        })
+                    })
+                    .map_err(|e| e.to_string())?
+                    .into_iter()
+                    .filter_map(|e| e.path.map(|p| (e.id, PathBuf::from(p))))
+                    .collect(),
+                None => Vec::new(),
+            };
+            let home = platform.home_dir().ok_or("no home directory")?;
+            let opts = agasthy_discovery::AiScanOptions::new(home, projects);
+            agasthy_discovery::scan_ai(platform.as_ref(), &opts, &agasthy_discovery::no_progress)
+        }
         "telemetry" => {
             let mut m = Monitor::new();
             m.sample();

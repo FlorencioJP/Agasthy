@@ -28,10 +28,20 @@ pub enum EntityKind {
     PackageManager,
     /// A dependency declared in a project manifest (`ecosystem:name`).
     Dependency,
+    /// An AI coding assistant, desktop AI app or local inference engine.
+    AiTool,
+    /// An AI model provider (cloud API or local endpoint).
+    AiProvider,
+    /// A model stored on disk for local inference.
+    LocalModel,
+    /// A Model Context Protocol server declared in a configuration file.
+    McpServer,
+    /// An AI instruction, rules, agent, skill, prompt, settings or MCP file.
+    AiConfigFile,
 }
 
 impl EntityKind {
-    pub const ALL: [EntityKind; 8] = [
+    pub const ALL: [EntityKind; 13] = [
         EntityKind::Repository,
         EntityKind::RemoteProject,
         EntityKind::Application,
@@ -40,6 +50,11 @@ impl EntityKind {
         EntityKind::Package,
         EntityKind::PackageManager,
         EntityKind::Dependency,
+        EntityKind::AiTool,
+        EntityKind::AiProvider,
+        EntityKind::LocalModel,
+        EntityKind::McpServer,
+        EntityKind::AiConfigFile,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -52,6 +67,11 @@ impl EntityKind {
             EntityKind::Package => "package",
             EntityKind::PackageManager => "package_manager",
             EntityKind::Dependency => "dependency",
+            EntityKind::AiTool => "ai_tool",
+            EntityKind::AiProvider => "ai_provider",
+            EntityKind::LocalModel => "local_model",
+            EntityKind::McpServer => "mcp_server",
+            EntityKind::AiConfigFile => "ai_config_file",
         }
     }
 
@@ -113,10 +133,28 @@ pub enum RelationKind {
     DependsOn,
     /// A project declares a runtime version requirement this runtime may satisfy.
     RequiresRuntime,
+    /// A repository contains this AI configuration file.
+    Contains,
+    /// An AI configuration file is read by this tool.
+    ConfiguresTool,
+    /// A configuration file declares this MCP server.
+    DeclaresMcpServer,
+    /// An AI tool uses this MCP server (via its configuration).
+    UsesMcpServer,
+    /// An AI tool uses this provider.
+    UsesProvider,
+    /// A local inference engine serves this model.
+    ServesModel,
+    /// Two AI configuration files have identical content.
+    SameContent,
+    /// Two applicable instruction files state different values for the same setting.
+    PotentialConflict,
+    /// An instruction file imports or references another.
+    References,
 }
 
 impl RelationKind {
-    pub const ALL: [RelationKind; 9] = [
+    pub const ALL: [RelationKind; 18] = [
         RelationKind::OriginRemote,
         RelationKind::TracksRemote,
         RelationKind::ManagedBy,
@@ -126,6 +164,15 @@ impl RelationKind {
         RelationKind::InstalledBy,
         RelationKind::DependsOn,
         RelationKind::RequiresRuntime,
+        RelationKind::Contains,
+        RelationKind::ConfiguresTool,
+        RelationKind::DeclaresMcpServer,
+        RelationKind::UsesMcpServer,
+        RelationKind::UsesProvider,
+        RelationKind::ServesModel,
+        RelationKind::SameContent,
+        RelationKind::PotentialConflict,
+        RelationKind::References,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -139,6 +186,15 @@ impl RelationKind {
             RelationKind::InstalledBy => "installed_by",
             RelationKind::DependsOn => "depends_on",
             RelationKind::RequiresRuntime => "requires_runtime",
+            RelationKind::Contains => "contains",
+            RelationKind::ConfiguresTool => "configures_tool",
+            RelationKind::DeclaresMcpServer => "declares_mcp_server",
+            RelationKind::UsesMcpServer => "uses_mcp_server",
+            RelationKind::UsesProvider => "uses_provider",
+            RelationKind::ServesModel => "serves_model",
+            RelationKind::SameContent => "same_content",
+            RelationKind::PotentialConflict => "potential_conflict",
+            RelationKind::References => "references",
         }
     }
 
@@ -227,6 +283,7 @@ pub enum ScanKind {
     Repositories,
     Software,
     Packages,
+    Ai,
 }
 
 impl ScanKind {
@@ -235,6 +292,7 @@ impl ScanKind {
             ScanKind::Repositories => "repositories",
             ScanKind::Software => "software",
             ScanKind::Packages => "packages",
+            ScanKind::Ai => "ai",
         }
     }
 
@@ -243,6 +301,7 @@ impl ScanKind {
             "repositories" => Some(ScanKind::Repositories),
             "software" => Some(ScanKind::Software),
             "packages" => Some(ScanKind::Packages),
+            "ai" => Some(ScanKind::Ai),
             _ => None,
         }
     }
@@ -431,6 +490,13 @@ pub struct ScanRecord {
 #[ts(export)]
 pub struct KindCount {
     pub kind: EntityKind,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RelationCount {
+    pub kind: RelationKind,
     pub count: u32,
 }
 

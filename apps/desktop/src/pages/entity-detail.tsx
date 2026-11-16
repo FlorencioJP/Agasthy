@@ -15,6 +15,7 @@ import type {
 import { Badge, Button, ConfidenceBadge, StateView } from "@agasthy/ui";
 import { Copy, FolderOpen, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { AiAttributes } from "../components/ai-attributes";
 import { Avail } from "../components/availability";
 import { Kv } from "../components/page";
 import { formatBytes, formatDateTime, formatRelative, shortenHome } from "../lib/format";
@@ -32,6 +33,15 @@ const REL_LABEL: Record<RelationKind, { out: string; in: string }> = {
   installed_by: { out: "Installed by package", in: "Provides executable" },
   depends_on: { out: "Depends on", in: "Used by project" },
   requires_runtime: { out: "Requires runtime", in: "Required by project" },
+  contains: { out: "Contains", in: "In project" },
+  configures_tool: { out: "Read by", in: "Configured by file" },
+  declares_mcp_server: { out: "Declares MCP server", in: "Declared in" },
+  uses_mcp_server: { out: "Uses MCP server", in: "Used by" },
+  uses_provider: { out: "Uses provider", in: "Used by tool" },
+  serves_model: { out: "Serves model", in: "Served by" },
+  same_content: { out: "Identical to", in: "Identical to" },
+  potential_conflict: { out: "May conflict with", in: "May conflict with" },
+  references: { out: "Imports", in: "Imported by" },
 };
 
 export function EntityDetailPanel({
@@ -145,6 +155,12 @@ function remoteText(r: RemoteRef | null): ReactNode {
 function Attributes({ entity }: { entity: Entity }) {
   const a = entity.attributes as Record<string, unknown>;
   switch (entity.kind) {
+    case "ai_tool":
+    case "ai_provider":
+    case "local_model":
+    case "mcp_server":
+    case "ai_config_file":
+      return <AiAttributes entity={entity} />;
     case "repository": {
       const r = a as unknown as RepositoryAttrs;
       return (

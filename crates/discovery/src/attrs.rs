@@ -211,3 +211,145 @@ pub struct RequiresRuntimeAttrs {
     pub runtime: String,
     pub declarations: Vec<Declaration>,
 }
+
+// ----- AI ecosystem -----
+
+/// One piece of on-disk evidence that an AI tool is present.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct AiSignal {
+    /// `binary`, `application`, `extension`, `config_dir`.
+    pub kind: String,
+    pub path: String,
+    pub detail: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct AiToolAttrs {
+    pub tool: String,
+    pub vendor: String,
+    /// `cli`, `desktop_app`, `ide`, `ide_extension`, `local_inference`.
+    pub category: String,
+    /// True when an executable, application or extension was found. False
+    /// when only configuration remains (possibly left over after uninstalling).
+    pub installed: bool,
+    pub signals: Vec<AiSignal>,
+    /// For local inference engines: whether their local port accepted a TCP connection.
+    pub local_endpoint: Option<LocalEndpoint>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct LocalEndpoint {
+    pub address: String,
+    pub listening: bool,
+}
+
+/// How far AGASTHY could confirm a provider, weakest to strongest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum ProviderLevel {
+    /// A tool on this machine is built for this provider.
+    Referenced,
+    /// A configuration file names this provider.
+    Configured,
+    /// An endpoint for it is configured.
+    EndpointConfigured,
+    /// A credential appears to be present (only presence is checked).
+    CredentialPresent,
+    /// A local endpoint accepted a connection.
+    Reachable,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ProviderSignal {
+    pub level: ProviderLevel,
+    pub source: String,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct AiProviderAttrs {
+    pub provider: String,
+    /// `cloud` or `local`.
+    pub kind: String,
+    pub highest: ProviderLevel,
+    pub signals: Vec<ProviderSignal>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct LocalModelAttrs {
+    /// `ollama`, `lm-studio`, `huggingface-cache`.
+    pub store: String,
+    pub model: String,
+    pub tag: Option<String>,
+    pub format: Option<String>,
+    pub size_bytes: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct McpServerAttrs {
+    pub server: String,
+    /// `stdio`, `http`, `sse` or `unknown`.
+    pub transport: String,
+    pub command: Option<String>,
+    /// Arguments with anything credential-like redacted.
+    pub args: Vec<String>,
+    /// URL with credentials and query string removed.
+    pub url: Option<String>,
+    /// Names of environment variables passed to the server. Values are never read.
+    pub env_names: Vec<String>,
+    pub config_file: String,
+    pub tool: Option<String>,
+    /// `global` or the project path the server is scoped to.
+    pub scope: String,
+    pub disabled: bool,
+    /// Same command + args or URL: identifies the same server configured in several places.
+    pub fingerprint: String,
+}
+
+/// A line that states a setting, used for conflict detection.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Directive {
+    /// `package_manager`, `indentation`, `quotes`, `semicolons`.
+    pub topic: String,
+    pub value: String,
+    pub line: u32,
+    pub text: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct AiConfigFileAttrs {
+    /// `instructions`, `rules`, `agent`, `skill`, `command`, `mcp_config`, `settings`.
+    pub file_type: String,
+    /// `global`, `project` or `directory`.
+    pub scope: String,
+    pub tools: Vec<String>,
+    pub project: Option<String>,
+    pub relative_path: String,
+    pub size_bytes: u64,
+    pub modified_at: Option<i64>,
+    pub sha256: String,
+    pub lines: u32,
+    pub headings: Vec<String>,
+    /// Redacted text for search and preview (instruction-like files only, capped).
+    pub text: Option<String>,
+    pub text_truncated: bool,
+    pub redactions: u32,
+    /// No tool that reads this file was found on this machine.
+    pub orphaned: bool,
+    pub duplicates: Vec<String>,
+    /// Other instruction files that apply to the same directory.
+    pub overlaps: Vec<String>,
+    pub directives: Vec<Directive>,
+    /// Files this one imports (`@path`), resolved.
+    pub references: Vec<String>,
+}

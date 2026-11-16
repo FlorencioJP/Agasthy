@@ -4,7 +4,8 @@ This describes AGASTHY v0.1.0. The in-app **Privacy** page shows the live values
 
 ## Transmits
 
-- **Nothing.** AGASTHY makes no network requests: no account, telemetry, analytics, crash reporting or update checks.
+- **Nothing to the internet.** AGASTHY makes no internet requests: no account, telemetry, analytics, crash reporting or update checks. Cloud AI providers are never contacted.
+- **Local ports, for local AI engines only.** When an installed local inference engine is found (Ollama 11434, LM Studio 1234, Jan 1337, vLLM 8000, LocalAI 8080), the AI scan opens and closes a TCP connection to that port on `127.0.0.1` to see if it is running. No data is sent.
 - Package managers that AGASTHY runs to list installed packages may refresh their *own* metadata caches according to their own settings. AGASTHY sets opt-outs where they exist (`HOMEBREW_NO_AUTO_UPDATE`, `HOMEBREW_NO_ANALYTICS`, `NO_UPDATE_NOTIFIER`, `COREPACK_ENABLE_NETWORK=0`, `DOTNET_CLI_TELEMETRY_OPTOUT`, `CHECKPOINT_DISABLE`, …).
 
 ## Reads
@@ -16,6 +17,7 @@ This describes AGASTHY v0.1.0. The in-app **Privacy** page shows the live values
 | Applications | `/Applications`, `~/Applications`, `/System/Applications` | `Contents/Info.plist` only. |
 | CLI tools | Your `PATH`, `/etc/paths`, `/etc/paths.d`, conventional install folders | Existence of catalogued tool names, and the output of their version command. |
 | Packages | Package managers | The output of one read-only listing command per manager. |
+| AI configuration | Fixed home locations (`~/.claude`, `~/.claude.json`, `~/.codex`, `~/.gemini`, `~/.cursor`, `~/.codeium/windsurf`, `~/.continue`, `~/.aider.conf.yml`, Claude Desktop and VS Code MCP configs), editor extension folder names, local model stores (`~/.ollama`, `~/.lmstudio`, `~/.cache/huggingface/hub`), and AI files inside scanned repositories | Credential files (`~/.codex/auth.json`, `~/.gemini/oauth_creds.json`, `~/.cache/huggingface/token`, …) are checked for existence only and never opened. Environment variables: names only. |
 | System resources | The operating system | CPU, memory, swap, disks, processes (name, PID, memory, CPU, executable path). Kept in memory only. |
 
 AGASTHY never scans your whole disk. Repository discovery only looks inside folders you add, and system locations and `~/Library` cannot be added.
@@ -26,7 +28,7 @@ A single SQLite database:
 
 - macOS: `~/Library/Application Support/org.agasthy.desktop/agasthy.db`
 
-It contains scan results with their evidence, your folder list, scan history and the audit log. Credentials embedded in Git remote URLs are stripped before storage. Delete the file to remove everything AGASTHY has stored.
+It contains scan results with their evidence, your folder list, scan history and the audit log. Credentials embedded in Git remote URLs are stripped before storage. For AI instruction-type files (instructions, rules, agents, skills, commands) up to 16 KB of text is stored for search and preview after credential-like values are redacted. Settings and MCP configuration files are parsed but their contents are not stored; for MCP servers only the command, redacted arguments, URL without credentials, and the *names* of environment variables are kept. Delete the file to remove everything AGASTHY has stored.
 
 ## Runs
 

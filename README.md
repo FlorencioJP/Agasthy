@@ -11,7 +11,7 @@ Discover · Understand · Connect · Optimize · Operate</p>
 
 AGASTHY is an open-source, local-first desktop application that discovers what is on a developer's machine, works out how the pieces relate, and explains it with evidence.
 
-> **Status: early development (v0.1.0, Phase 2).** It runs on macOS. It has not been published or released, and nothing here is offered as a download yet.
+> **Status: early development (v0.1.0, Phase 3).** It runs on macOS. It has not been published or released, and nothing here is offered as a download yet.
 
 ## Why it exists
 
@@ -32,13 +32,14 @@ AGASTHY reads the machine directly and keeps what it finds, plus the evidence be
 | **Dependencies** | Reads `package.json`, `Cargo.toml`, `pyproject.toml`, `requirements.txt` and `go.mod` (including nested packages), with resolved versions from `package-lock.json`, `Cargo.lock` and `uv.lock`. Shows which dependencies your projects share. |
 | **Runtime requirements & impact** | Links projects to the runtimes they declare (`engines.node`, `.nvmrc`, `requires-python`, `rust-version`, `go`, …). Answers *"what breaks if I remove this runtime?"*: for each project, whether it would break, fall back to another copy on PATH, or be unaffected, and what is unknown. Nothing is removed; it is a simulation. |
 | **Machine Graph** | An interactive graph of projects, runtimes, dependencies, packages, binaries and upstream projects, with focus, depth and kind filters, search, and the evidence behind every edge. |
+| **AI ecosystem** | Finds AI coding assistants, desktop AI apps and local inference engines from evidence on disk; the providers they use (with how strongly each is confirmed); MCP servers in every known config; local models; and AI instruction files (`CLAUDE.md`, `AGENTS.md`, Cursor/Copilot rules, agents, skills, commands) globally and per project, with duplicates, overlaps, orphans and potential conflicts. Credential files are only checked for existence and secrets are redacted. |
 | **Audit & privacy** | An append-only audit log of every action, and a privacy page listing exactly which programs AGASTHY may run. |
 
 Repositories, installed packages, binaries on PATH and applications are kept as **separate kinds**. A local clone is never treated as installed software.
 
 ### Not built yet
 
-Planned, but **not** in this build: AI-ecosystem discovery (assistants, providers, MCP servers, instruction files), process management, disk cleanup, security advisories, impact analysis, the update lab, snapshots and the AI operator. See [ROADMAP.md](ROADMAP.md). The app's sidebar shows only the sections that work.
+Planned, but **not** in this build: process management, disk cleanup, security advisories, impact analysis, the update lab, snapshots and the AI operator. See [ROADMAP.md](ROADMAP.md). The app's sidebar shows only the sections that work.
 
 ## Screenshots
 
@@ -113,7 +114,7 @@ Details: [docs/development.md](docs/development.md).
 
 ## Privacy
 
-AGASTHY makes no network requests in this build: no account, telemetry or update checks. It only looks for repositories in folders you add, stores results in a local SQLite file, and strips credentials from Git URLs before storing them. It runs external programs only from an allowlist, with fixed arguments and never through a shell. Full details: [docs/privacy.md](docs/privacy.md).
+AGASTHY makes no internet requests in this build: no account, telemetry or update checks (the AI scan only checks whether local inference engines are listening on 127.0.0.1). It only looks for repositories in folders you add, stores results in a local SQLite file, and strips credentials from Git URLs before storing them. It runs external programs only from an allowlist, with fixed arguments and never through a shell. Full details: [docs/privacy.md](docs/privacy.md).
 
 ## Roadmap
 
