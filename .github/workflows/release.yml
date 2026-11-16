@@ -117,9 +117,50 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  linux:
+    name: Linux (x64, preview)
+    # The oldest supported runner, so the AppImage runs on older distributions too.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: System libraries for Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev build-essential patchelf file
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build AppImage and .deb with signed update file
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          v=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
+          pnpm tauri build --bundles appimage,deb
+          mkdir -p dist
+          img=$(ls target/release/bundle/appimage/*.AppImage | head -1)
+          deb=$(ls target/release/bundle/deb/*.deb | head -1)
+          test -f "$img" && test -f "$img.sig" && test -f "$deb"
+          cp "$img" "dist/AGASTHY_${v}_amd64.AppImage"
+          cp "$img.sig" "dist/AGASTHY_${v}_amd64.AppImage.sig"
+          cp "$deb" "dist/agasthy_${v}_amd64.deb"
+          (cd dist && sha256sum "AGASTHY_${v}_amd64.AppImage" > "AGASTHY_${v}_amd64.AppImage.sha256" && sha256sum "agasthy_${v}_amd64.deb" > "agasthy_${v}_amd64.deb.sha256")
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*
+          if-no-files-found: error
+
   publish:
     name: Draft release
-    needs: [macos, windows]
+    needs: [macos, windows, linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -128,7 +169,7 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Updater manifest (macOS + Windows)
+      - name: Updater manifest (macOS, Windows, Linux)
         run: node scripts/updater-manifest.mjs --repo "$GITHUB_REPOSITORY" --tag "$GITHUB_REF_NAME"
 
       - name: Create draft release
@@ -138,7 +179,9 @@ jobs:
           cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
           ## Install
 
-          **macOS (Apple silicon, macOS 12+):** download `AGASTHY-…-apple-silicon.dmg`, drag AGASTHY to Applications, then right-click it and choose **Open** the first time (not yet notarized by Apple).
+          **macOS (Apple silicon, macOS 12+):** download `AGASTHY-…-apple-silicon.dmg` and drag AGASTHY to Applications. The first time, macOS says it cannot verify the developer (the app is not notarized by Apple yet): open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
+
+          **Linux (x64, preview):** download `AGASTHY_…_amd64.AppImage`, make it executable (`chmod +x`) and run it, or install `agasthy_…_amd64.deb` with `sudo apt install ./agasthy_…_amd64.deb`.
 
           **Windows (x64, preview):** download `AGASTHY_…_x64-setup.exe` and run it. Windows SmartScreen will warn because the installer is not code-signed yet: choose **More info → Run anyway**. See the README for what works on Windows today.
 

@@ -4,6 +4,7 @@
 //
 //   macOS:   AGASTHY_<version>_aarch64.app.tar.gz  (+ .sig)
 //   Windows: AGASTHY_<version>_x64-setup.exe       (+ .sig)
+//   Linux:   AGASTHY_<version>_amd64.AppImage      (+ .sig)
 //
 //   node scripts/updater-manifest.mjs --repo OWNER/NAME [--tag vX.Y.Z] [--notes "text"]
 //
@@ -36,6 +37,7 @@ if (tag !== `v${version}`) {
 const candidates = {
   "darwin-aarch64": `AGASTHY_${version}_aarch64.app.tar.gz`,
   "windows-x86_64": `AGASTHY_${version}_x64-setup.exe`,
+  "linux-x86_64": `AGASTHY_${version}_amd64.AppImage`,
 };
 const platforms = {};
 for (const [platform, asset] of Object.entries(candidates)) {

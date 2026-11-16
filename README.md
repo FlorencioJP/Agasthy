@@ -15,7 +15,7 @@ free disk space safely, and ask plain questions about your machine with evidence
 <p align="center">
   <a href="https://github.com/HMAKT99/Agasthy/releases/latest"><strong>Download for Mac (Apple silicon)</strong></a> ·
   <a href="https://github.com/HMAKT99/Agasthy/releases/latest">Windows preview</a> ·
-  Linux from source ·
+  <a href="https://github.com/HMAKT99/Agasthy/releases/latest">Linux preview</a> ·
   free and open source · no account · no telemetry
 </p>
 
@@ -68,13 +68,15 @@ A developer machine holds hundreds of moving parts: cloned repositories, several
 
 1. Download `AGASTHY-…-apple-silicon.dmg` from [Releases](https://github.com/HMAKT99/Agasthy/releases).
 2. Drag **AGASTHY** to **Applications**.
-3. First launch: right-click AGASTHY → **Open** (not yet notarized by Apple, so macOS asks once). If macOS says the app is damaged: `xattr -dr com.apple.quarantine /Applications/AGASTHY.app`.
+3. First launch: macOS says it cannot verify the developer (AGASTHY is not notarized by Apple yet). Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. You only do this once.
 
 **Windows (x64, preview)**
 
 Download `AGASTHY_…_x64-setup.exe` from [Releases](https://github.com/HMAKT99/Agasthy/releases) and run it. SmartScreen warns because the installer is not code-signed yet: **More info → Run anyway**.
 
-**Linux:** build from source (see [Development setup](#development-setup)); no packaged download yet.
+**Linux (x64, preview)**
+
+Download `AGASTHY_…_amd64.AppImage`, then `chmod +x` it and run it; or install the `.deb` with `sudo apt install ./agasthy_…_amd64.deb`. Built and launch-tested in CI on Ubuntu; feedback from other distributions welcome.
 
 AGASTHY lives in the menu bar: closing the window keeps it running, and **Quit** is in the menu-bar menu. Updates are offered in the app, signature-checked, and installed only when you click **Install and restart**.
 
@@ -85,7 +87,7 @@ AGASTHY lives in the menu bar: closing the window keeps it running, and **Quit**
 | macOS 12+ (Apple silicon) | **Supported.** Built and tested on macOS 15 / M2. |
 | macOS (Intel) | Expected to work from source; not tested, no download yet. |
 | Windows 10/11 (x64) | **Preview.** Installer with each release; built and tested in CI. Known gaps: graceful Stop (Force quit works), WinGet packages, GPU details. [Reports welcome](https://github.com/HMAKT99/Agasthy/issues/new). |
-| Linux | **From source.** Builds and passes tests in CI; not yet run on real Linux desktops. |
+| Linux (x64) | **Preview.** AppImage and `.deb` with each release; built in CI and launch-tested on Ubuntu. Not yet: GPU details. [Reports welcome](https://github.com/HMAKT99/Agasthy/issues/new). |
 
 ## Everything it does
 

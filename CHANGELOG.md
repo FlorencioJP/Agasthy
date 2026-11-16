@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-16
+
+- **macOS:** the whole app bundle is now ad-hoc signed. 0.1.2 downloaded through a browser could be reported as "damaged"; 0.1.3 gets the normal "cannot verify the developer" prompt (allow it once in System Settings → Privacy & Security).
+- **Linux preview:** AppImage and `.deb` with each release, with in-app updates for the AppImage.
+- **End-to-end smoke test** (`.github/workflows/smoke.yml`): installs and launches each release on real macOS, Windows and Linux machines, and runs discovery on all three.
+- Demo video tooling: patched `zod` dependency.
+
 ## [0.1.2] - 2026-11-16
 
 - **Windows preview:** an x64 installer is published with each release (unsigned; SmartScreen asks once). Installed copies update through the same signed updater.

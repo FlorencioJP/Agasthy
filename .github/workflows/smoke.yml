@@ -1,0 +1,168 @@
+name: End-to-end smoke test
+
+# Installs the published files of a release (draft or not) on real macOS,
+# Windows and Linux runners, launches the app and checks that it started,
+# and runs the command-line discovery on each OS against a real Git repo.
+#
+#   gh workflow run smoke.yml -f tag=v0.1.3
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to test (e.g. v0.1.3)
+        required: true
+
+permissions:
+  # Draft releases are only visible to tokens that can write to the repository.
+  # Nothing in this workflow writes anything.
+  contents: write
+
+env:
+  TAG: ${{ inputs.tag }}
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  macos-app:
+    name: macOS app (DMG)
+    runs-on: macos-latest
+    steps:
+      - name: Download the DMG from the release
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "*apple-silicon.dmg*"
+          shasum -a 256 -c *.dmg.sha256
+      - name: Install from the DMG
+        run: |
+          mnt=$(mktemp -d)
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" *.dmg
+          cp -R "$mnt/AGASTHY.app" "$RUNNER_TEMP/"
+          hdiutil detach "$mnt"
+      - name: Signature is complete (no "damaged" error after a browser download)
+        run: |
+          codesign --verify --deep --strict --verbose=2 "$RUNNER_TEMP/AGASTHY.app"
+          codesign -dv "$RUNNER_TEMP/AGASTHY.app" 2>&1 | grep -E "Signature|Sealed Resources"
+      - name: Launch and check it started
+        run: |
+          app="$RUNNER_TEMP/AGASTHY.app/Contents/MacOS/agasthy-desktop"
+          "$app" > "$RUNNER_TEMP/out.log" 2>&1 &
+          pid=$!
+          sleep 30
+          kill -0 "$pid" || { echo "app exited early"; cat "$RUNNER_TEMP/out.log"; exit 1; }
+          log="$HOME/Library/Application Support/org.agasthy.desktop/logs/agasthy.log"
+          cat "$log"
+          grep -q "start AGASTHY ${TAG#v}" "$log"
+          ! grep -q " panic " "$log"
+          kill "$pid"
+
+  windows-app:
+    name: Windows app (installer)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Download the installer from the release
+        run: |
+          gh release download $env:TAG --repo $env:GITHUB_REPOSITORY --pattern "*x64-setup.exe*"
+          $exe = Get-ChildItem *x64-setup.exe | Select-Object -First 1
+          $expected = (Get-Content "$($exe.Name).sha256").Split(" ")[0]
+          $actual = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+          if ($expected -ne $actual) { throw "checksum mismatch" }
+      - name: Silent install
+        run: |
+          $exe = Get-ChildItem *x64-setup.exe | Select-Object -First 1
+          Start-Process -FilePath $exe.FullName -ArgumentList "/S" -Wait
+          $app = Get-ChildItem -Path "$env:LOCALAPPDATA","$env:ProgramFiles" -Recurse -Filter "agasthy-desktop.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $app) { throw "installed executable not found" }
+          "APP=$($app.FullName)" | Out-File -Append $env:GITHUB_ENV
+          Write-Output "Installed: $($app.FullName)"
+      - name: Launch and check it started
+        run: |
+          $p = Start-Process -FilePath $env:APP -PassThru
+          Start-Sleep -Seconds 30
+          if ($p.HasExited) { throw "app exited early with code $($p.ExitCode)" }
+          $log = Join-Path $env:APPDATA "org.agasthy.desktop\logs\agasthy.log"
+          Get-Content $log
+          $v = $env:TAG.TrimStart("v")
+          if (-not (Select-String -Path $log -Pattern "start AGASTHY $v" -Quiet)) { throw "start line missing" }
+          if (Select-String -Path $log -Pattern " panic " -Quiet) { throw "panic logged" }
+          Stop-Process -Id $p.Id -Force
+      - name: Silent uninstall
+        run: |
+          $u = Get-ChildItem -Path (Split-Path $env:APP) -Filter "uninstall.exe" | Select-Object -First 1
+          if ($u) { Start-Process -FilePath $u.FullName -ArgumentList "/S" -Wait }
+
+  linux-app:
+    name: Linux app (AppImage and .deb)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download from the release
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "*amd64.AppImage" --pattern "*amd64.AppImage.sha256" --pattern "*amd64.deb*"
+          sha256sum -c *.AppImage.sha256 *.deb.sha256
+      - name: Runtime libraries and a virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb dbus-x11 libwebkit2gtk-4.1-0 libayatana-appindicator3-1 libfuse2t64 || sudo apt-get install -y xvfb dbus-x11 libwebkit2gtk-4.1-0 libayatana-appindicator3-1 libfuse2
+      - name: AppImage launches and starts
+        run: |
+          chmod +x *.AppImage
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          xvfb-run -a dbus-run-session -- ./AGASTHY_*_amd64.AppImage > out.log 2>&1 &
+          sleep 40
+          log="$HOME/.local/share/org.agasthy.desktop/logs/agasthy.log"
+          cat out.log | tail -20 || true
+          cat "$log"
+          grep -q "start AGASTHY ${TAG#v}" "$log"
+          ! grep -q " panic " "$log"
+          pkill -f agasthy-desktop || true
+      - name: .deb installs and launches
+        run: |
+          sudo apt-get install -y ./agasthy_*_amd64.deb
+          rm -f "$HOME/.local/share/org.agasthy.desktop/logs/agasthy.log"
+          bin=$(dpkg -L agasthy | grep -E "/bin/" | head -1)
+          echo "binary: $bin"
+          xvfb-run -a dbus-run-session -- "$bin" > out-deb.log 2>&1 &
+          sleep 30
+          grep -q "start AGASTHY ${TAG#v}" "$HOME/.local/share/org.agasthy.desktop/logs/agasthy.log"
+          pkill -f agasthy-desktop || true
+
+  cli-discovery:
+    name: Discovery on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build the CLI
+        run: cargo build --release -p agasthy-cli
+      - name: Discover a real Git repository
+        run: |
+          work="$RUNNER_TEMP/code"
+          mkdir -p "$work/demo-app"
+          cd "$work/demo-app"
+          git init -q && git config user.email ci@example.invalid && git config user.name CI
+          echo '{"name":"demo-app","dependencies":{"react":"^19.0.0"}}' > package.json
+          git add . && git commit -qm init
+          echo "change" > notes.txt
+          cd "$GITHUB_WORKSPACE"
+          out=$(./target/release/agasthy scan "$work" --full)
+          echo "$out" | head -c 2000
+          echo "$out" | grep -q '"demo-app"'
+          echo "$out" | grep -q 'untracked'
+      - name: Software, packages, processes and usage run cleanly
+        run: |
+          for c in software packages processes usage platform; do
+            echo "== $c"
+            ./target/release/agasthy $c > out.json
+            head -c 600 out.json; echo
+          done
