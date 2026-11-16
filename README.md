@@ -13,6 +13,7 @@ Free disk space without breaking anything. Ask plain questions about your machin
 
 <p align="center">
   <a href="https://github.com/HMAKT99/Agasthy/releases/latest"><strong>Download for Mac (Apple silicon)</strong></a> ·
+  <a href="https://github.com/HMAKT99/Agasthy/releases/latest">Windows preview</a> ·
   free and open source · no account · no telemetry
 </p>
 
@@ -55,7 +56,13 @@ You run Claude Code in three terminals, Codex in another, Cursor on the side. Ea
 
 AGASTHY lives in the menu bar as well as its window; closing the window keeps it running, and **Quit AGASTHY** is in the menu-bar menu. It offers new versions itself (signature-checked, installed only when you click **Install and restart**); this can be turned off in Settings → About.
 
-Intel Macs, Windows and Linux are not released yet (see [Supported platforms](#supported-platforms)).
+### Windows (x64, preview)
+
+Download `AGASTHY_…_x64-setup.exe` from [Releases](https://github.com/HMAKT99/Agasthy/releases) and run it. The installer is not code-signed yet, so Windows SmartScreen shows a warning: choose **More info → Run anyway**.
+
+The preview is built and tested in CI on Windows but has not yet been used much on real Windows PCs; [please report](https://github.com/HMAKT99/Agasthy/issues/new) anything that looks wrong (Settings → About → **Report a problem** prepares the details). Known gaps on Windows: **Stop** for a process is not available (Force quit is), leftovers whose start AGASTHY did not see are not detected, and WinGet packages and GPU details are not shown.
+
+Intel Macs and Linux are not released yet (see [Supported platforms](#supported-platforms)).
 
 ## Why it exists
 
@@ -113,7 +120,7 @@ Open items are listed in [ROADMAP.md](ROADMAP.md), notably validating the Window
 |---|---|
 | macOS 12+ (Apple Silicon) | Implemented and tested on macOS 15 / M2. |
 | macOS (Intel) | Expected to work; not yet tested. |
-| Windows 11 | **Unvalidated.** Adapters implemented and unit-tested against recorded output (applications from the registry, Scoop, Chocolatey 2.x, npm/pnpm/uv/cargo, listening ports), but not yet built or run on Windows. WinGet inventory and GPU information report "unsupported". CI is configured to check it. |
+| Windows 10/11 (x64) | **Preview.** Installer published with each release; built and tested in CI. Applications from the registry, Scoop, Chocolatey 2.x, npm/pnpm/uv/cargo, listening ports via `netstat`, agents and token usage. Not yet: graceful Stop (Force quit works), WinGet, GPU details. Feedback from real Windows PCs wanted. |
 | Linux | **Unvalidated.** `.desktop` applications (including Flatpak and Snap), Flatpak and Snap packages, Homebrew/npm/pnpm/uv/pip/cargo, listening ports via `lsof`; unit-tested, not yet run on Linux. GPU information reports "unsupported". |
 
 ## Architecture

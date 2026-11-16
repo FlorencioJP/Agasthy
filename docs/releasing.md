@@ -1,6 +1,6 @@
 # Releasing
 
-Releases are built by `.github/workflows/release.yml` when a tag `vX.Y.Z` is pushed. The tag must match `version` in `apps/desktop/src-tauri/tauri.conf.json`. The workflow runs the tests, builds the app and DMG with `pnpm release:mac`, writes the updater manifest with `scripts/updater-manifest.mjs`, and creates a **draft** GitHub release. Publishing the draft makes it visible to the in-app updater.
+Releases are built by `.github/workflows/release.yml` when a tag `vX.Y.Z` is pushed: a macOS job (DMG + update archive), a Windows job (NSIS installer, which is also the update file; preview) and a publish job that writes one `latest.json` for both and creates the draft. The tag must match `version` in `apps/desktop/src-tauri/tauri.conf.json`. The workflow runs the tests, builds the app and DMG with `pnpm release:mac`, writes the updater manifest with `scripts/updater-manifest.mjs`, and creates a **draft** GitHub release. Publishing the draft makes it visible to the in-app updater.
 
 ## One-time setup
 

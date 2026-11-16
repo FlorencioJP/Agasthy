@@ -69,5 +69,11 @@ else
   echo "note: unsigned build. Recipients must right-click AGASTHY and choose Open the first time." >&2
 fi
 
+# The signed update archive, named the way the updater manifest expects.
+if [ -f "$APP.tar.gz" ] && [ -f "$APP.tar.gz.sig" ]; then
+  cp "$APP.tar.gz" "dist/AGASTHY_${VERSION}_aarch64.app.tar.gz"
+  cp "$APP.tar.gz.sig" "dist/AGASTHY_${VERSION}_aarch64.app.tar.gz.sig"
+fi
+
 (cd dist && shasum -a 256 "$(basename "$DMG")" > "$(basename "$DMG").sha256")
 echo "$DMG"

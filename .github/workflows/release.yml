@@ -1,12 +1,13 @@
 name: Release
 
-# Push a tag that matches the app version (e.g. v0.2.0) to build the macOS app,
-# sign the update archive, and create a DRAFT GitHub release. Review the draft
-# and publish it; installed copies then see the update.
+# Push a tag that matches the app version (e.g. v0.2.0) to build the macOS app
+# and the Windows preview installer, sign the update files, and create a DRAFT
+# GitHub release. Review the draft and publish it; installed copies then see
+# the update.
 #
 # Required secret:  TAURI_SIGNING_PRIVATE_KEY (contents of ~/.tauri/agasthy-updater.key)
 # Optional secret:  TAURI_SIGNING_PRIVATE_KEY_PASSWORD (if the key has one)
-# Optional secrets for a signed, notarized app (Apple Developer account):
+# Optional secrets for a signed, notarized macOS app (Apple Developer account):
 #   APPLE_CERTIFICATE (base64 .p12), APPLE_CERTIFICATE_PASSWORD,
 #   APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
 
@@ -75,7 +76,59 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm release:mac
 
-      - name: Updater manifest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*
+          if-no-files-found: error
+
+  windows:
+    name: Windows (x64, preview)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build installer and signed update file
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          v=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
+          pnpm tauri build --bundles nsis
+          mkdir -p dist
+          setup=$(ls target/release/bundle/nsis/*-setup.exe | head -1)
+          test -f "$setup" && test -f "$setup.sig"
+          cp "$setup" "dist/AGASTHY_${v}_x64-setup.exe"
+          cp "$setup.sig" "dist/AGASTHY_${v}_x64-setup.exe.sig"
+          (cd dist && sha256sum "AGASTHY_${v}_x64-setup.exe" > "AGASTHY_${v}_x64-setup.exe.sha256")
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Draft release
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Updater manifest (macOS + Windows)
         run: node scripts/updater-manifest.mjs --repo "$GITHUB_REPOSITORY" --tag "$GITHUB_REF_NAME"
 
       - name: Create draft release
@@ -85,12 +138,13 @@ jobs:
           cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
           ## Install
 
-          1. Download `AGASTHY-…-apple-silicon.dmg` below (Apple silicon Macs, macOS 12 or later).
-          2. Open it and drag **AGASTHY** to **Applications**.
-          3. The first time, right-click AGASTHY in Applications and choose **Open** (this build is not notarized by Apple).
+          **macOS (Apple silicon, macOS 12+):** download `AGASTHY-…-apple-silicon.dmg`, drag AGASTHY to Applications, then right-click it and choose **Open** the first time (not yet notarized by Apple).
 
-          Installed copies offer this update automatically; nothing is installed until you click **Install and restart**.
+          **Windows (x64, preview):** download `AGASTHY_…_x64-setup.exe` and run it. Windows SmartScreen will warn because the installer is not code-signed yet: choose **More info → Run anyway**. See the README for what works on Windows today.
+
+          Installed copies offer later updates themselves; nothing is installed until you click **Install and restart**.
 
           See [CHANGELOG.md](CHANGELOG.md) for what changed.
           NOTES
+          ls -la dist
           gh release create "$GITHUB_REF_NAME" dist/* --draft --title "AGASTHY ${GITHUB_REF_NAME}" --notes-file "$RUNNER_TEMP/notes.md"

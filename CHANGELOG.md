@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [0.1.2] - 2026-11-16
 
+- **Windows preview:** an x64 installer is published with each release (unsigned; SmartScreen asks once). Installed copies update through the same signed updater.
 - **Report a problem:** a redacted, editable summary for GitHub issues, from Settings → About or the error screen.
 - **Export CSV** on Token Usage: tokens and estimated cost per day, agent, project folder and model.
 - Storage & Cleanup no longer misses build folders in a project when `.git` is listed first in the folder.

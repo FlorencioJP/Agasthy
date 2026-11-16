@@ -1,18 +1,21 @@
 #!/usr/bin/env node
-// Write dist/latest.json for the in-app updater and place the signed update
-// archive next to it with the name the manifest points to.
+// Write dist/latest.json for the in-app updater from the signed update files
+// in dist/ (whatever platforms were built):
+//
+//   macOS:   AGASTHY_<version>_aarch64.app.tar.gz  (+ .sig)
+//   Windows: AGASTHY_<version>_x64-setup.exe       (+ .sig)
 //
 //   node scripts/updater-manifest.mjs --repo OWNER/NAME [--tag vX.Y.Z] [--notes "text"]
 //
-// Needs a build made with TAURI_SIGNING_PRIVATE_KEY set (it produces
-// AGASTHY.app.tar.gz and AGASTHY.app.tar.gz.sig). The installed app checks the
-// signature against the public key in tauri.conf.json before installing.
+// The installed app checks each signature against the public key in
+// tauri.conf.json before installing.
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const dist = join(root, "dist");
 const arg = (name) => {
   const i = process.argv.indexOf(name);
   return i > 0 ? process.argv[i + 1] : undefined;
@@ -30,28 +33,30 @@ if (tag !== `v${version}`) {
   process.exit(1);
 }
 
-const bundle = join(root, "target/release/bundle/macos");
-const archive = join(bundle, "AGASTHY.app.tar.gz");
-const sig = `${archive}.sig`;
-if (!existsSync(archive) || !existsSync(sig)) {
-  console.error("no signed update archive: build with TAURI_SIGNING_PRIVATE_KEY set (see docs/releasing.md)");
+const candidates = {
+  "darwin-aarch64": `AGASTHY_${version}_aarch64.app.tar.gz`,
+  "windows-x86_64": `AGASTHY_${version}_x64-setup.exe`,
+};
+const platforms = {};
+for (const [platform, asset] of Object.entries(candidates)) {
+  const file = join(dist, asset);
+  if (existsSync(file) && existsSync(`${file}.sig`)) {
+    platforms[platform] = {
+      signature: readFileSync(`${file}.sig`, "utf8").trim(),
+      url: `https://github.com/${repo}/releases/download/${tag}/${asset}`,
+    };
+  }
+}
+if (Object.keys(platforms).length === 0) {
+  console.error("no signed update files in dist/: build with TAURI_SIGNING_PRIVATE_KEY set (see docs/releasing.md)");
   process.exit(1);
 }
-
-const asset = `AGASTHY_${version}_aarch64.app.tar.gz`;
-mkdirSync(join(root, "dist"), { recursive: true });
-copyFileSync(archive, join(root, "dist", asset));
 
 const manifest = {
   version,
   notes: arg("--notes") ?? `AGASTHY ${version}. See the release notes on GitHub.`,
   pub_date: new Date().toISOString(),
-  platforms: {
-    "darwin-aarch64": {
-      signature: readFileSync(sig, "utf8").trim(),
-      url: `https://github.com/${repo}/releases/download/${tag}/${asset}`,
-    },
-  },
+  platforms,
 };
-writeFileSync(join(root, "dist/latest.json"), JSON.stringify(manifest, null, 2) + "\n");
-console.log(`dist/latest.json → ${manifest.platforms["darwin-aarch64"].url}`);
+writeFileSync(join(dist, "latest.json"), JSON.stringify(manifest, null, 2) + "\n");
+console.log(`dist/latest.json: ${Object.keys(platforms).join(", ")}`);
