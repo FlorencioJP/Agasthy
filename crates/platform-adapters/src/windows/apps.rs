@@ -55,7 +55,7 @@ pub fn read_all(runner: &dyn CommandRunner) -> (Vec<InstalledApp>, Vec<String>) 
     }
     let mut seen = HashSet::new();
     apps.retain(|a| seen.insert((a.name.to_lowercase(), a.version.clone())));
-    apps.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    apps.sort_by_cached_key(|a| a.name.to_lowercase());
     (apps, failed)
 }
 

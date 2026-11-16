@@ -137,7 +137,7 @@ impl AppInventory for MacOs {
         for (dir, location) in self.app_dirs() {
             collect_apps(&dir, location, 0, &mut apps, &mut issues);
         }
-        apps.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        apps.sort_by_cached_key(|a| a.name.to_lowercase());
         apps.dedup_by(|a, b| a.path == b.path);
         AppScan {
             apps: Availability::available(apps),

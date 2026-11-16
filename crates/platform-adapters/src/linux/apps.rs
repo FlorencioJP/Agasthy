@@ -126,7 +126,7 @@ pub fn read_all(dirs: &[(PathBuf, AppLocation)]) -> (Vec<InstalledApp>, Vec<Stri
         .map(|(_, a)| a)
         .filter(|a| seen.insert(a.path.clone()))
         .collect();
-    apps.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    apps.sort_by_cached_key(|a| a.name.to_lowercase());
     (apps, issues)
 }
 
