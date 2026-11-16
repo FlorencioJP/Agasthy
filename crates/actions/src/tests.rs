@@ -19,7 +19,7 @@ struct Fixture {
 
 fn fixture() -> Fixture {
     let dir = tempfile::tempdir().unwrap();
-    let root = std::fs::canonicalize(dir.path()).unwrap();
+    let root = agasthy_core::paths::canonical(dir.path()).unwrap();
     let home = root.join("home");
     let cache = home.join(".npm/_cacache");
     std::fs::create_dir_all(cache.join("x")).unwrap();

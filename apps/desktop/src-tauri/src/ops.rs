@@ -123,7 +123,7 @@ pub(crate) fn context(inner: &Inner) -> CmdResult<ActionContext<'_>> {
         home: home(inner)?,
         scan_roots: scan_roots(inner)?
             .into_iter()
-            .map(|r| std::fs::canonicalize(&r).unwrap_or(r))
+            .map(|r| agasthy_core::paths::canonical(&r).unwrap_or(r))
             .collect(),
         repos: repositories(inner)?
             .into_iter()

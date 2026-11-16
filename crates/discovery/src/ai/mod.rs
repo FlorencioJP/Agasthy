@@ -664,7 +664,7 @@ pub fn scan_ai(
         .enumerate()
         .map(|(i, (f, _))| {
             (
-                std::fs::canonicalize(&f.path).unwrap_or_else(|_| f.path.clone()),
+                agasthy_core::paths::canonical(&f.path).unwrap_or_else(|_| f.path.clone()),
                 i,
             )
         })
@@ -676,7 +676,7 @@ pub fn scan_ai(
             if !target.is_file() {
                 continue;
             }
-            let canon = std::fs::canonicalize(&target).unwrap_or(target.clone());
+            let canon = agasthy_core::paths::canonical(&target).unwrap_or(target.clone());
             references[i].push(canon.display().to_string());
             if let Some(&j) = path_index.get(&canon) {
                 batch.relationships.push(rel(

@@ -294,7 +294,7 @@ pub fn analyze(input: &AnalysisInput, runner: &dyn CommandRunner) -> DiskAnalysi
     let roots: Vec<PathBuf> = input
         .scan_roots
         .iter()
-        .map(|r| std::fs::canonicalize(r).unwrap_or_else(|_| r.clone()))
+        .map(|r| agasthy_core::paths::canonical(r).unwrap_or_else(|_| r.clone()))
         .collect();
 
     for (repo, dupes) in &input.repos {
@@ -439,7 +439,7 @@ mod tests {
     #[test]
     fn finds_artifacts_and_applies_git_checks() {
         let d = tempfile::tempdir().unwrap();
-        let root = std::fs::canonicalize(d.path()).unwrap();
+        let root = agasthy_core::paths::canonical(d.path()).unwrap();
         let home = root.join("home");
         let code = root.join("code");
         let repo = code.join("web");
@@ -533,7 +533,9 @@ mod tests {
     #[test]
     fn git_folder_does_not_hide_later_artifacts() {
         let d = tempfile::tempdir().unwrap();
-        let repo = std::fs::canonicalize(d.path()).unwrap().join("app");
+        let repo = agasthy_core::paths::canonical(d.path())
+            .unwrap()
+            .join("app");
         mk(
             &repo,
             &[
@@ -559,7 +561,7 @@ mod tests {
     #[test]
     fn without_git_project_artifacts_are_not_eligible() {
         let d = tempfile::tempdir().unwrap();
-        let root = std::fs::canonicalize(d.path()).unwrap();
+        let root = agasthy_core::paths::canonical(d.path()).unwrap();
         let repo = root.join("code/app");
         mk(
             &repo,

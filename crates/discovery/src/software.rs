@@ -189,7 +189,7 @@ pub fn locate_tools(platform: &dyn Platform, dirs: &[SearchDir]) -> Vec<FoundToo
                     continue;
                 }
                 // The same file reachable through two PATH entries counts once.
-                let canonical = std::fs::canonicalize(&p).unwrap_or_else(|_| p.clone());
+                let canonical = agasthy_core::paths::canonical(&p).unwrap_or_else(|_| p.clone());
                 if seen_canonical.contains(&canonical) && first.is_some() {
                     continue;
                 }
@@ -220,7 +220,9 @@ fn tool_entity(
     } else {
         EntityKind::Binary
     };
-    let resolved = std::fs::canonicalize(&f.path).ok().filter(|r| r != &f.path);
+    let resolved = agasthy_core::paths::canonical(&f.path)
+        .ok()
+        .filter(|r| r != &f.path);
     let effective = resolved.clone().unwrap_or_else(|| f.path.clone());
 
     let mut evidence = vec![EvidenceInput::new(

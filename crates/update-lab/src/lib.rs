@@ -342,7 +342,7 @@ impl LabStore {
     pub fn new(dir: PathBuf) -> std::io::Result<Self> {
         std::fs::create_dir_all(&dir)?;
         Ok(Self {
-            dir: std::fs::canonicalize(&dir)?,
+            dir: agasthy_core::paths::canonical(&dir)?,
         })
     }
 

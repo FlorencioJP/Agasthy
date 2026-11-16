@@ -51,7 +51,7 @@ fn discovers_real_repositories() {
         return;
     }
     let tmp = tempfile::tempdir().unwrap();
-    let root = std::fs::canonicalize(tmp.path()).unwrap();
+    let root = agasthy_core::paths::canonical(tmp.path()).unwrap();
 
     // clean repo with origin on GitHub
     let clean = root.join("projects/clean");

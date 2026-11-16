@@ -63,7 +63,7 @@ pub struct MoveReport {
 impl Quarantine {
     pub fn new(root: PathBuf) -> std::io::Result<Self> {
         std::fs::create_dir_all(&root)?;
-        let root = std::fs::canonicalize(&root)?;
+        let root = agasthy_core::paths::canonical(&root)?;
         Ok(Self { root })
     }
 
@@ -278,7 +278,7 @@ mod tests {
     #[test]
     fn move_restore_purge() {
         let d = tempfile::tempdir().unwrap();
-        let root = std::fs::canonicalize(d.path()).unwrap();
+        let root = agasthy_core::paths::canonical(d.path()).unwrap();
         let q = Quarantine::new(root.join("q")).unwrap();
         let a = root.join("proj/node_modules");
         let b = root.join("proj/target");

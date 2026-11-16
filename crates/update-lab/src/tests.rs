@@ -82,7 +82,7 @@ fn full_lab_lifecycle_never_touches_the_original_until_apply() {
         return;
     }
     let d = tempfile::tempdir().unwrap();
-    let root = std::fs::canonicalize(d.path()).unwrap();
+    let root = agasthy_core::paths::canonical(d.path()).unwrap();
     let repo = root.join("app");
     std::fs::create_dir_all(&repo).unwrap();
     let pkg =

@@ -7,6 +7,7 @@
 pub mod availability;
 pub mod error;
 pub mod model;
+pub mod paths;
 pub mod store;
 pub mod time;
 

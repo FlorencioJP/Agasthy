@@ -41,7 +41,7 @@ pub fn validate_scan_root(paths: &dyn SystemPaths, raw: &str) -> Result<PathBuf,
     if !p.is_absolute() {
         return Err(RootError::NotAbsolute);
     }
-    let canonical = match std::fs::canonicalize(p) {
+    let canonical = match agasthy_core::paths::canonical(p) {
         Ok(c) => c,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(RootError::DoesNotExist),
         Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
@@ -131,6 +131,6 @@ mod tests {
         let link = dir.path().join("link");
         std::os::unix::fs::symlink(&target, &link).unwrap();
         let v = validate_scan_root(&TestPaths, link.to_str().unwrap()).unwrap();
-        assert_eq!(v, std::fs::canonicalize(&target).unwrap());
+        assert_eq!(v, agasthy_core::paths::canonical(&target).unwrap());
     }
 }

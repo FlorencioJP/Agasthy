@@ -48,7 +48,7 @@ pub fn check_path(
     if !meta.is_dir() {
         return Err("is not a directory".into());
     }
-    let canonical = std::fs::canonicalize(path).map_err(|e| e.to_string())?;
+    let canonical = agasthy_core::paths::canonical(path).map_err(|e| e.to_string())?;
     if canonical != path {
         return Err("path resolves elsewhere (a parent is a symbolic link)".into());
     }
@@ -63,7 +63,7 @@ pub fn check_path(
             return Err(format!("contains the repository {}", r.display()));
         }
     }
-    let home = std::fs::canonicalize(home).unwrap_or_else(|_| home.to_path_buf());
+    let home = agasthy_core::paths::canonical(home).unwrap_or_else(|_| home.to_path_buf());
     if canonical == home || home.starts_with(&canonical) {
         return Err("is your home folder or one of its parents".into());
     }
@@ -146,7 +146,7 @@ mod tests {
     #[test]
     fn path_rules() {
         let d = tempfile::tempdir().unwrap();
-        let root = std::fs::canonicalize(d.path()).unwrap();
+        let root = agasthy_core::paths::canonical(d.path()).unwrap();
         let home = root.join("home");
         let code = root.join("code");
         let repo = code.join("app");
