@@ -13,6 +13,13 @@ use agasthy_provenance::{parse_remote, redact_url};
 
 use crate::attrs::{HeadInfo, RemoteInfo, WorkingTreeStatus};
 
+/// Point Git's hooks folder at the null device so no repository hook can run.
+/// (`/dev/null` does not exist on Windows; Git for Windows understands `NUL`.)
+#[cfg(windows)]
+pub const HOOKS_OFF: &str = "core.hooksPath=NUL";
+#[cfg(not(windows))]
+pub const HOOKS_OFF: &str = "core.hooksPath=/dev/null";
+
 /// Options placed before every git subcommand.
 const SAFE_GIT_OPTS: &[&str] = &[
     "-c",
@@ -20,7 +27,7 @@ const SAFE_GIT_OPTS: &[&str] = &[
     "-c",
     "core.untrackedCache=false",
     "-c",
-    "core.hooksPath=/dev/null",
+    HOOKS_OFF,
     "-c",
     "diff.external=",
     "-c",
@@ -357,7 +364,7 @@ mod tests {
         let call = &m.calls()[0];
         let joined = call.args.join(" ");
         assert!(joined.contains("core.fsmonitor=false"));
-        assert!(joined.contains("core.hooksPath=/dev/null"));
+        assert!(joined.contains(HOOKS_OFF));
         assert!(call.env.iter().any(|(k, _)| k == "GIT_CONFIG_NOSYSTEM"));
     }
 }

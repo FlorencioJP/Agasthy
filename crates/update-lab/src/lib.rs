@@ -124,19 +124,32 @@ fn git(runner: &dyn CommandRunner, repo: &Path, args: &[&str]) -> Result<String,
         "-c",
         "core.fsmonitor=false",
         "-c",
-        "core.hooksPath=/dev/null",
+        if cfg!(windows) {
+            "core.hooksPath=NUL"
+        } else {
+            "core.hooksPath=/dev/null"
+        },
     ];
     all.extend_from_slice(args);
     let out = runner
         .run(&CommandSpec::new("git", &all).timeout(Duration::from_secs(60)))
         .map_err(|e| e.to_string())?;
     if !out.success() {
-        return Err(out
+        // Git prints progress first ("Preparing worktree …"); the reason is the
+        // `fatal:`/`error:` line, or else the last line.
+        let lines: Vec<&str> = out
             .stderr
             .lines()
-            .next()
-            .unwrap_or("git failed")
-            .to_string());
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .collect();
+        let reason = lines
+            .iter()
+            .find(|l| l.starts_with("fatal:") || l.starts_with("error:"))
+            .or(lines.last())
+            .copied()
+            .unwrap_or("git failed");
+        return Err(reason.to_string());
     }
     Ok(out.stdout)
 }
