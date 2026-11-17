@@ -22,7 +22,7 @@ git tag v0.2.0 && git push origin main v0.2.0
 The draft includes the Claude Desktop extension `agasthy-mcp-X.Y.Z.mcpb`, built by `scripts/build-mcpb.sh` from the three CLI archives. Publishing the draft also runs two workflows:
 
 - `.github/workflows/readme-links.yml` points the README's download buttons at the new release and commits to `main`.
-- `.github/workflows/publish-channels.yml` publishes the version to the official MCP Registry (`integrations/mcp/server.json`, signed in with GitHub Actions OIDC, no secret) and points the Homebrew tap at it (`scripts/bump-homebrew-tap.py`). The tap step needs the repository secret `HOMEBREW_TAP_TOKEN`: a fine-grained token with **Contents: read and write** on `HMAKT99/homebrew-tap` only. Without it the step is skipped with a warning, and the tap can be updated by hand with the same script.
+- `.github/workflows/publish-channels.yml` publishes the version to the official MCP Registry (`integrations/mcp/server.json`, signed in with GitHub Actions OIDC, no secret) and points the Homebrew tap at it (`scripts/bump-homebrew-tap.py`). The tap step needs the repository secret `HOMEBREW_TAP_DEPLOY_KEY`: the private half of a write-enabled deploy key on `HMAKT99/homebrew-tap`, so it can push to that repository only. To replace it: `ssh-keygen -t ed25519 -N "" -f key`, `gh repo deploy-key add key.pub -R HMAKT99/homebrew-tap --allow-write`, `gh secret set HOMEBREW_TAP_DEPLOY_KEY -R HMAKT99/Agasthy < key`, then delete both files. Without it the step is skipped with a warning, and the tap can be updated by hand with the same script.
 
 Registry versions cannot be deleted; check the draft before publishing.
 
