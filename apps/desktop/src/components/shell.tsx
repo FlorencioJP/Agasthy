@@ -101,6 +101,8 @@ export function Shell() {
         </SidebarSection>
       </Sidebar>
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        {/* The native title bar is hidden (titleBarStyle: Overlay), so this strip is the drag handle. */}
+        <div data-tauri-drag-region className="h-7 shrink-0" />
         <UpdateBanner />
         <Outlet />
       </main>
