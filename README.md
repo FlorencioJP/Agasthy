@@ -70,6 +70,7 @@ Your agent can ask AGASTHY too. The **AGASTHY skill** gives OpenClaw, Hermes, Cl
 /plugin marketplace add HMAKT99/Agasthy        # Claude Code: skill + MCP server
 npx skills add HMAKT99/Agasthy                 # Codex, Cursor, Gemini CLI and more
 hermes skills install HMAKT99/Agasthy/skills/agasthy
+gemini extensions install https://github.com/HMAKT99/Agasthy   # Gemini CLI: skill + MCP server
 ```
 
 Or point your agent at [`llms.txt`](llms.txt): *"Install AGASTHY for me by reading https://raw.githubusercontent.com/HMAKT99/Agasthy/main/llms.txt"*.
