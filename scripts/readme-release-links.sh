@@ -26,3 +26,12 @@ point "AGASTHY_${v}_x64-setup.exe" \
 point "agasthy-mcp-${v}.mcpb" \
   "releases/download/v${V}/agasthy-mcp-${V}\.mcpb" \
   "releases/download/${tag}/agasthy-mcp-${v}.mcpb"
+point "AGASTHY-${v}-apple-silicon.dmg" \
+  "releases/download/v${V}/AGASTHY-${V}-apple-silicon\.dmg" \
+  "releases/download/${tag}/AGASTHY-${v}-apple-silicon.dmg"
+point "AGASTHY_${v}_amd64.AppImage" \
+  "releases/download/v${V}/AGASTHY_${V}_amd64\.AppImage" \
+  "releases/download/${tag}/AGASTHY_${v}_amd64.AppImage"
+point "agasthy_${v}_amd64.deb" \
+  "releases/download/v${V}/agasthy_${V}_amd64\.deb" \
+  "releases/download/${tag}/agasthy_${v}_amd64.deb"

@@ -1,8 +1,8 @@
 name: README download links
 
 # When a release is published (not when the draft is created, because draft
-# links 404), point the README's versioned download links (the Windows installer
-# and the Claude Desktop .mcpb) at it and commit to main. Run it by hand
+# links 404), point the README's versioned download links (the app downloads
+# for each OS and the Claude Desktop .mcpb) at it and commit to main. Run it by hand
 # with a tag to redo it.
 
 on:

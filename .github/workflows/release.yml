@@ -198,6 +198,9 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Claude Desktop extension (.mcpb with all three CLIs)
+        run: bash scripts/build-mcpb.sh "${GITHUB_REF_NAME#v}" dist
+
       - name: Updater manifest (macOS, Windows, Linux)
         run: node scripts/updater-manifest.mjs --repo "$GITHUB_REPOSITORY" --tag "$GITHUB_REF_NAME"
 
@@ -216,6 +219,8 @@ jobs:
           **Linux (x64, preview):** download `AGASTHY_…_amd64.AppImage`, make it executable (`chmod +x`) and run it, or install `agasthy_…_amd64.deb` with `sudo apt install ./agasthy_…_amd64.deb`.
 
           **Command-line tool and agent skill:** `agasthy-cli-…` lets coding agents and scripts query what AGASTHY found (read-only, JSON). For OpenClaw, Hermes and Claude Code, install the AGASTHY skill: see [integrations/agent-skill](https://github.com/HMAKT99/Agasthy/tree/main/integrations/agent-skill).
+
+          **Claude Desktop:** download `agasthy-mcp-….mcpb` and double-click it to add AGASTHY's read-only MCP server (macOS, Windows and Linux binaries included).
 
           **Windows (x64, preview):** download `AGASTHY_…_x64-setup.exe` and run it. Windows SmartScreen will warn because the installer is not code-signed yet: choose **More info → Run anyway**. See the README for what works on Windows today.
 

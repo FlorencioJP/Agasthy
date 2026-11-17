@@ -1,0 +1,41 @@
+{
+  "manifest_version": "0.2",
+  "name": "agasthy",
+  "display_name": "AGASTHY",
+  "version": "0.1.5",
+  "description": "Read-only machine intelligence for coding agents: repos, runtimes, packages, ports, agent sessions and token cost.",
+  "long_description": "AGASTHY's read-only MCP server lets coding agents ask about the developer machine with real data: search repositories, applications, runtimes, packages, tools and MCP servers; see what breaks before removing a package or runtime; list live coding-agent sessions and the processes and ports they left running; and read token usage and estimated cost from the agents' own local logs (counters only, never message text). Every tool is read-only. Most queries use the data scanned by the AGASTHY desktop app; processes, telemetry, agents and token usage work without it.",
+  "author": { "name": "HMAKT99", "url": "https://github.com/HMAKT99" },
+  "repository": { "type": "git", "url": "https://github.com/HMAKT99/Agasthy" },
+  "homepage": "https://github.com/HMAKT99/Agasthy",
+  "documentation": "https://github.com/HMAKT99/Agasthy/tree/main/integrations/mcp",
+  "support": "https://github.com/HMAKT99/Agasthy/issues",
+  "icon": "icon.png",
+  "server": {
+    "type": "binary",
+    "entry_point": "bin/darwin-arm64/agasthy",
+    "mcp_config": {
+      "command": "${__dirname}/bin/darwin-arm64/agasthy",
+      "args": ["mcp"],
+      "env": {},
+      "platform_overrides": {
+        "linux": { "command": "${__dirname}/bin/linux-x64/agasthy", "args": ["mcp"] },
+        "win32": { "command": "${__dirname}/bin/win32-x64/agasthy.exe", "args": ["mcp"] }
+      }
+    }
+  },
+  "tools": [
+    { "name": "status", "description": "When each kind of data was last scanned." },
+    { "name": "find", "description": "Search repositories, apps, runtimes, packages, tools, MCP servers and AI config files." },
+    { "name": "entity", "description": "One item with its evidence and relationships." },
+    { "name": "impact", "description": "What breaks if a package, runtime or tool is removed." },
+    { "name": "shared_dependencies", "description": "Dependencies used by the most projects." },
+    { "name": "agents", "description": "Live coding-agent sessions and what they left running." },
+    { "name": "processes", "description": "Processes, their listening ports and projects." },
+    { "name": "token_usage", "description": "Token usage and estimated cost from agents' local logs." },
+    { "name": "telemetry", "description": "Memory, CPU, load and disk right now." }
+  ],
+  "keywords": ["developer-tools", "coding-agents", "token-usage", "ports", "dependencies", "macos", "read-only"],
+  "license": "Apache-2.0",
+  "compatibility": { "platforms": ["darwin", "linux", "win32"] }
+}

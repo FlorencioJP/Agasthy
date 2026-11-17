@@ -10,11 +10,16 @@ Releases are built by `.github/workflows/release.yml` when a tag `vX.Y.Z` is pus
 ## Cutting a release
 
 ```sh
-# 1. bump "version" in apps/desktop/src-tauri/tauri.conf.json (and the CHANGELOG)
+# 1. bump the version in apps/desktop/src-tauri/tauri.conf.json, Cargo.toml,
+#    skills/agasthy/SKILL.md, plugins/agasthy/.claude-plugin/plugin.json,
+#    plugins/agasthy/.codex-plugin/plugin.json, integrations/mcp/mcpb/manifest.json
+#    and gemini-extension.json (CI checks they match), and the CHANGELOG
 # 2. commit, then tag and push
 git tag v0.2.0 && git push origin main v0.2.0
 # 3. review the draft release on GitHub, then publish it
 ```
+
+The draft includes the Claude Desktop extension `agasthy-mcp-X.Y.Z.mcpb`, built by `scripts/build-mcpb.sh` from the three CLI archives. Publishing the draft runs `.github/workflows/readme-links.yml`, which points the README's download buttons at the new release and commits to `main`.
 
 ## Building locally
 
