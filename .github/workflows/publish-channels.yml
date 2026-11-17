@@ -1,0 +1,112 @@
+name: Publish to Homebrew and the MCP Registry
+
+# When a release is published (not a draft, not a prerelease):
+#  * MCP Registry: publishes io.github.HMAKT99/agasthy at the release version,
+#    pointing at its agasthy-mcp-<version>.mcpb. Signs in with GitHub Actions
+#    OIDC, so no secret is needed. Registry versions cannot be deleted.
+#  * Homebrew tap (HMAKT99/homebrew-tap): points the cask and the CLI formula at
+#    the release and pushes. Needs the secret HOMEBREW_TAP_TOKEN: a fine-grained
+#    token with "Contents: read and write" on HMAKT99/homebrew-tap only. Without
+#    it, this job is skipped with a warning.
+# Run it by hand with a tag to redo it.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Published release tag, e.g. v0.1.7"
+        required: true
+
+concurrency:
+  group: publish-channels
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  mcp-registry:
+    name: MCP Registry
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fill in the registry entry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release tag: $TAG"; exit 1; }
+          v="${TAG#v}"
+          sha=$(gh release download "$TAG" -p "agasthy-mcp-$v.mcpb.sha256" -O - | cut -c1-64)
+          [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || { echo "release has no valid agasthy-mcp-$v.mcpb.sha256"; exit 1; }
+          jq --arg v "$v" --arg sha "$sha" '
+            .version = $v
+            | .packages[0].version = $v
+            | .packages[0].identifier = "https://github.com/HMAKT99/Agasthy/releases/download/v\($v)/agasthy-mcp-\($v).mcpb"
+            | .packages[0].fileSha256 = $sha' integrations/mcp/server.json > server.json
+          cat server.json
+      - name: Install mcp-publisher 1.5.0 (checksum-verified)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o p.tgz https://github.com/modelcontextprotocol/registry/releases/download/v1.5.0/mcp-publisher_linux_amd64.tar.gz
+          echo "79bbb73ba048c5906034f73ef6286d7763bd53cf368ea0b358fc593ed360cbd5  p.tgz" | sha256sum -c -
+          tar -xzf p.tgz mcp-publisher && rm p.tgz
+      - name: Publish
+        run: |
+          ./mcp-publisher validate
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
+
+  homebrew-tap:
+    name: Homebrew tap
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    steps:
+      - name: Check for the tap token
+        id: token
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "::warning::HOMEBREW_TAP_TOKEN is not set; update HMAKT99/homebrew-tap by hand (scripts/bump-homebrew-tap.py)."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.ok == 'true'
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.ok == 'true'
+        with:
+          repository: HMAKT99/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+      - name: Point the cask and formula at the release
+        if: steps.token.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release tag: $TAG"; exit 1; }
+          v="${TAG#v}"
+          mkdir sums
+          gh release download "$TAG" -D sums \
+            -p "AGASTHY-$v-apple-silicon.dmg.sha256" \
+            -p "agasthy-cli-macos-aarch64.tar.gz.sha256" \
+            -p "agasthy-cli-linux-x86_64.tar.gz.sha256"
+          python3 scripts/bump-homebrew-tap.py tap "$v" sums
+          cd tap
+          if git diff --quiet; then echo "tap already at $v"; exit 0; fi
+          git diff
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "agasthy $v, agasthy-cli $v"
+          git push origin HEAD

@@ -42,7 +42,7 @@ jobs:
           if git diff --quiet README.md; then echo "README links already point at $TAG"; exit 0; fi
           git diff README.md
           git config user.name "github-actions[bot]"
-          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "README: download links for $TAG" README.md
           git pull --rebase origin main
           git push origin HEAD:main

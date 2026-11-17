@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.HMAKT99/agasthy",
+  "title": "AGASTHY",
+  "description": "Read-only dev-machine intelligence: repos, packages, ports, agent sessions and token cost.",
+  "repository": {
+    "url": "https://github.com/HMAKT99/Agasthy",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/HMAKT99/Agasthy/tree/main/integrations/mcp",
+  "version": "0.0.0",
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/HMAKT99/Agasthy/releases/download/vX.Y.Z/agasthy-mcp-X.Y.Z.mcpb",
+      "version": "0.0.0",
+      "fileSha256": "set-by-the-publish-workflow",
+      "transport": { "type": "stdio" }
+    }
+  ]
+}
