@@ -113,7 +113,11 @@ Or by hand:
 
 **Windows (x64, preview)**
 
-Download `AGASTHY_…_x64-setup.exe` from [Releases](https://github.com/HMAKT99/Agasthy/releases) and run it. SmartScreen warns because the installer is not code-signed yet: **More info → Run anyway**.
+**[⬇ Download AGASTHY for Windows (x64)](https://github.com/HMAKT99/Agasthy/releases/download/v0.1.5/AGASTHY_0.1.5_x64-setup.exe)**
+
+Run it. Windows says "Windows protected your PC" because the installer is not code-signed yet: **More info → Run anyway**. Then scan your code folder.
+
+Using a coding agent? Also get [⬇ the CLI](https://github.com/HMAKT99/Agasthy/releases/latest/download/agasthy-cli-windows-x86_64.zip) (Claude Code, Cursor, Codex; unzip it and put `agasthy.exe` on your PATH) or [⬇ the Claude Desktop extension](https://github.com/HMAKT99/Agasthy/releases/latest/download/agasthy-mcp-0.1.5.mcpb) (double-click it).
 
 **Linux (x64, preview)**
 
