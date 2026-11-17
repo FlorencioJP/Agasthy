@@ -96,7 +96,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Build unsigned bundle
-        run: pnpm --filter @agasthy/desktop tauri build --bundles app
+        # Updater artifacts need the release signing key, which only the Release workflow has.
+        run: pnpm --filter @agasthy/desktop tauri build --bundles app --config '{"bundle":{"createUpdaterArtifacts":false}}'
       - uses: actions/upload-artifact@v4
         with:
           name: AGASTHY-macos-unsigned
