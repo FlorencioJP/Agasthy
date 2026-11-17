@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-17
+
+- **Windows fixes from the first real-PC test:**
+  - No more false "swapping heavily" insight. Windows reports memory committed beyond RAM as "swap", which is normal; it is now labelled as such and no longer raises an alert.
+  - Low-disk insights, the tray menu and the Overview disk card use the disk that holds your user folder (`C:\`), not only `/`.
+  - Live agent sessions started with Node on Windows (`node.exe`, backslash paths) are recognised: Claude Code, Codex, Gemini CLI and GitHub Copilot CLI.
+  - "Show in File Explorer" instead of "Reveal in Finder", and no "macOS" labels on other systems.
+- **Token usage for GitHub Copilot CLI**, from its local session logs (`~/.copilot/session-state`, or `$COPILOT_HOME`). Finished sessions only: Copilot writes its totals when a session ends.
+- **Claude Desktop extension in every release:** `agasthy-mcp-<version>.mcpb`, with the macOS, Windows and Linux binaries.
+- **README:** direct download buttons for each system, updated automatically when a release is published.
+
 ## [0.1.5] - 2026-11-17
 
 - **MCP server:** `agasthy mcp` serves nine read-only tools (status, find, entity, impact, shared_dependencies, agents, processes, token_usage, telemetry) over stdio for Claude Desktop, Claude Code, Cursor, VS Code, Codex and any MCP client. Setup: `integrations/mcp`.
