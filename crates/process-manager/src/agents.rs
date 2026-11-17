@@ -178,16 +178,25 @@ pub fn identify(p: &ProcessInfo) -> Option<&'static AgentSignature> {
         .as_deref()
         .and_then(|e| e.rsplit(['/', '\\']).next())
         .map(|n| n.trim_end_matches(".exe"));
+    // Windows: `copilot.exe`, `node.exe`, and `node_modules\@github\copilot\…` arguments.
+    let name = p.name.strip_suffix(".exe").unwrap_or(&p.name);
+    let args: Vec<String> = p
+        .command
+        .iter()
+        .take(3)
+        .map(|a| a.replace('\\', "/"))
+        .collect();
     AGENTS.iter().find(|a| {
-        a.names.iter().any(|n| p.name == *n || exe_name == Some(n))
+        a.names.iter().any(|n| name == *n || exe_name == Some(n))
             // Node/Python launchers: the agent is named in the first few arguments.
-            || (is_launcher(&p.name)
-                && p.command.iter().take(3).any(|arg| a.arg_markers.iter().any(|m| arg.contains(m))))
+            || (is_launcher(name)
+                && args.iter().any(|arg| a.arg_markers.iter().any(|m| arg.contains(m))))
     })
 }
 
 fn is_launcher(name: &str) -> bool {
     let n = name.to_ascii_lowercase();
+    let n = n.strip_suffix(".exe").unwrap_or(&n);
     n == "node" || n == "bun" || n == "deno" || n.starts_with("python")
 }
 
@@ -755,6 +764,27 @@ mod tests {
         assert_eq!(claude.project.as_ref().unwrap().name, "web");
         let gemini = s.iter().find(|x| x.agent == "gemini-cli").unwrap();
         assert!(gemini.children.is_empty());
+    }
+
+    #[test]
+    fn identifies_windows_agents_run_by_node_exe() {
+        let mut copilot = proc(
+            10,
+            1,
+            "node.exe",
+            &[
+                r"C:\Program Files\nodejs\node.exe",
+                r"C:\Users\u\AppData\Roaming\npm\node_modules\@github\copilot\index.js",
+            ],
+            100,
+        );
+        copilot.exe = Some(r"C:\Program Files\nodejs\node.exe".into());
+        assert_eq!(identify(&copilot).map(|a| a.id), Some("copilot-cli"));
+        let mut native = proc(11, 1, "copilot.exe", &[], 100);
+        native.exe = Some(r"C:\Users\u\AppData\Local\copilot\copilot.exe".into());
+        assert_eq!(identify(&native).map(|a| a.id), Some("copilot-cli"));
+        let plain = proc(12, 1, "node.exe", &[r"C:\code\web\server.js"], 100);
+        assert_eq!(identify(&plain).map(|a| a.id), None);
     }
 
     #[test]

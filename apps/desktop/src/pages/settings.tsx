@@ -319,7 +319,7 @@ function AboutPanel() {
               <span className="flex flex-wrap items-center gap-2">
                 <span className="text-muted">Local only, never uploaded. Send it with a bug report.</span>
                 <Button size="sm" variant="ghost" onClick={() => void revealInFileManager(`${info.data.data_dir}/logs/agasthy.log`)}>
-                  Show in Finder
+                  Show in {{ macos: "Finder", windows: "File Explorer" }[info.data.platform.os] ?? "file manager"}
                 </Button>
               </span>,
             ],

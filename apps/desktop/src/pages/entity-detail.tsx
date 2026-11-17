@@ -21,7 +21,7 @@ import { Avail } from "../components/availability";
 import { Kv } from "../components/page";
 import { formatBytes, formatDateTime, formatRelative, shortenHome } from "../lib/format";
 import { errorMessage, revealInFileManager } from "../lib/ipc";
-import { useEntityDetail } from "../lib/queries";
+import { useEntityDetail, useOsWords } from "../lib/queries";
 import { KIND_LABEL } from "./discovery";
 
 const REL_LABEL: Record<RelationKind, { out: string; in: string }> = {
@@ -101,6 +101,7 @@ export function EntityDetailPanel({
 }
 
 function Header({ entity }: { entity: Entity }) {
+  const words = useOsWords();
   const [copied, setCopied] = useState(false);
   const [revealError, setRevealError] = useState<string | null>(null);
   return (
@@ -122,7 +123,7 @@ function Header({ entity }: { entity: Entity }) {
                 revealInFileManager(entity.path as string).catch((e) => setRevealError(errorMessage(e)));
               }}
             >
-              <FolderOpen aria-hidden /> Reveal in Finder
+              <FolderOpen aria-hidden /> Show in {words.fileManager}
             </Button>
             <Button
               size="sm"
@@ -162,6 +163,7 @@ function remoteText(r: RemoteRef | null): ReactNode {
 }
 
 function Attributes({ entity }: { entity: Entity }) {
+  const words = useOsWords();
   const a = entity.attributes as Record<string, unknown>;
   switch (entity.kind) {
     case "ai_tool":
@@ -227,7 +229,7 @@ function Attributes({ entity }: { entity: Entity }) {
               ["Bundle ID", x.bundle_id ?? "—"],
               ["Version", x.version ?? "—"],
               ["Build", x.build ?? "—"],
-              ["Location", x.location === "system" ? "shipped with macOS" : x.location === "user" ? "user Applications folder" : "/Applications (all users)"],
+              ["Location", x.location === "system" ? `shipped with ${words.osName}` : x.location === "user" ? (words.os === "macos" ? "user Applications folder" : "installed for this user") : words.os === "macos" ? "/Applications (all users)" : "installed for all users"],
             ]}
           />
         </Section>

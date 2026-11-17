@@ -78,7 +78,7 @@ export function ReportDialog({ onClose, context }: { onClose: () => void; contex
             )}
           </div>
           <p className="text-[11.5px] text-faint">
-            Includes version, macOS and chip, scan status, counts, settings and the last lines of the local diagnostics log. Your home folder is shown as ~; no
+            Includes version, operating system and chip, scan status, counts, settings and the last lines of the local diagnostics log. Your home folder is shown as ~; no
             hostname, project names or file contents. GitHub issues are public.
           </p>
         </div>

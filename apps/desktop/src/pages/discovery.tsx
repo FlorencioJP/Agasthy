@@ -154,7 +154,7 @@ const COLUMNS: Record<DiscoveryTab, Column[]> = {
       header: "Location",
       cell: (e) => {
         const l = attrs<InstalledApp>(e).location;
-        return <Badge tone={l === "system" ? "neutral" : l === "user" ? "info" : "accent"}>{l === "system" ? "macOS" : l === "user" ? "user" : "all users"}</Badge>;
+        return <Badge tone={l === "system" ? "neutral" : l === "user" ? "info" : "accent"}>{l === "system" ? "system" : l === "user" ? "user" : "all users"}</Badge>;
       },
       sort: (e) => attrs<InstalledApp>(e).location,
     },

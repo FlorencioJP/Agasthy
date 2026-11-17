@@ -146,7 +146,7 @@ impl Host {
                         "memory_total": mem.map(|m| m.total_bytes),
                         "memory_used": mem.map(|m| m.used_bytes),
                         "memory_available": mem.map(|m| m.available_bytes),
-                        "swap_used": mem.map(|m| m.swap_used_bytes),
+                        "swap_used": mem.filter(|_| !agasthy_system_monitor::SWAP_IS_COMMIT_CHARGE).map(|m| m.swap_used_bytes),
                         "disks": t.disks.value().map(|d| d.iter().map(|x| json!({"mount": x.mount_point, "total": x.total_bytes, "available": x.available_bytes})).collect::<Vec<_>>()),
                         "gpus": gpus.value().map(|g| g.iter().map(|x| json!({"name": x.model, "vendor": x.vendor, "cores": x.cores, "vram": x.vram})).collect::<Vec<_>>()).unwrap_or_default(),
                     }
@@ -183,7 +183,7 @@ impl Host {
                     "system": {
                         "memory_total": mem.map(|m| m.total_bytes),
                         "memory_used": mem.map(|m| m.used_bytes),
-                        "swap_used": mem.map(|m| m.swap_used_bytes),
+                        "swap_used": mem.filter(|_| !agasthy_system_monitor::SWAP_IS_COMMIT_CHARGE).map(|m| m.swap_used_bytes),
                         "cpu_percent": t.cpu.value().map(|c| c.usage_percent),
                     },
                     "processes": list.into_iter().take(limit).map(Self::process_json).collect::<Vec<_>>(),
@@ -303,11 +303,10 @@ impl Host {
                     }
                 };
                 let t = self.telemetry()?;
-                let free = t.disks.value().and_then(|d| {
-                    d.iter()
-                        .find(|x| x.mount_point == "/" || x.mount_point == "/System/Volumes/Data")
-                        .map(|x| x.available_bytes)
-                });
+                let free = t
+                    .disks
+                    .value()
+                    .and_then(|d| d.iter().find(|x| x.primary).map(|x| x.available_bytes));
                 Ok(json!({
                     "analysed_at": a.analysed_at,
                     "free_bytes": free,

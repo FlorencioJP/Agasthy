@@ -9,7 +9,7 @@ import { PageHeader, Panel, Stat } from "../components/page";
 import { SCAN_LABELS, progressLabel, useScanActivity } from "../components/scan-activity";
 import { formatBytes, formatDuration, formatNumber, formatPercent, formatRelative, shortenHome, unavailableReason, value } from "../lib/format";
 import { errorMessage } from "../lib/ipc";
-import { useGpus, useOverview, useTelemetry } from "../lib/queries";
+import { useGpus, useOsWords, useOverview, useTelemetry } from "../lib/queries";
 import { KIND_LABEL, tabForKind } from "./discovery";
 
 export function OverviewPage() {
@@ -103,7 +103,7 @@ function FirstRun() {
 }
 
 function primaryDisk(disks: DiskSample[]): DiskSample | undefined {
-  return disks.find((d) => d.mount_point === "/") ?? disks.find((d) => !d.system_volume);
+  return disks.find((d) => d.primary) ?? disks.find((d) => !d.system_volume);
 }
 
 function Resource({ label, main, sub, meter }: { label: string; main: ReactNode; sub?: ReactNode; meter: number | null }) {
@@ -121,6 +121,9 @@ function Resource({ label, main, sub, meter }: { label: string; main: ReactNode;
 
 function ResourcesPanel({ telemetry, error }: { telemetry?: TelemetrySnapshot; error: unknown }) {
   const gpus = useGpus();
+  const { os } = useOsWords();
+  // Windows reports commit charge beyond RAM, not page-file activity.
+  const commit = os === "windows";
   if (error) return <StateView kind="error" title="Telemetry unavailable" description={errorMessage(error)} compact />;
   if (!telemetry) return <StateView kind="loading" title="Sampling system resources" compact />;
   const cpu = value(telemetry.cpu);
@@ -148,9 +151,9 @@ function ResourcesPanel({ telemetry, error }: { telemetry?: TelemetrySnapshot; e
         meter={mem ? mem.used_bytes / mem.total_bytes : null}
       />
       <Resource
-        label="Swap"
+        label={commit ? "Committed beyond RAM" : "Swap"}
         main={<Avail value={telemetry.memory} render={(m) => (m.swap_total_bytes ? `${formatBytes(m.swap_used_bytes)} / ${formatBytes(m.swap_total_bytes, 0)}` : "none configured")} />}
-        sub={mem && mem.swap_total_bytes ? "macOS grows swap on demand" : ""}
+        sub={!mem || !mem.swap_total_bytes ? "" : commit ? "Not page-file activity; several GB is normal" : os === "macos" ? "macOS grows swap on demand" : ""}
         meter={mem && mem.swap_total_bytes ? mem.swap_used_bytes / mem.swap_total_bytes : null}
       />
       <Resource

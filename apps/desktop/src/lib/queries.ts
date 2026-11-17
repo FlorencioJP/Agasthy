@@ -87,3 +87,13 @@ export function useRunScan() {
     onSettled: () => invalidate(),
   });
 }
+
+/** Words that differ by operating system. Falls back to neutral wording until app info loads. */
+export function useOsWords() {
+  const os = useAppInfo().data?.platform.os;
+  return {
+    os,
+    osName: os === "macos" ? "macOS" : os === "windows" ? "Windows" : os === "linux" ? "Linux" : "the system",
+    fileManager: os === "macos" ? "Finder" : os === "windows" ? "File Explorer" : "file manager",
+  };
+}

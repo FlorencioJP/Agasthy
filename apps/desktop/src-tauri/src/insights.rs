@@ -100,7 +100,12 @@ pub fn compute(inner: &Inner) -> CmdResult<InsightsReport> {
     // ----- memory -----
     if let Some(m) = telemetry.memory.value() {
         let avail = m.available_bytes as f64 / m.total_bytes.max(1) as f64;
-        let swap = m.swap_used_bytes as f64;
+        // Windows reports commit charge beyond RAM as "swap"; that is not paging.
+        let swap = if agasthy_system_monitor::SWAP_IS_COMMIT_CHARGE {
+            0.0
+        } else {
+            m.swap_used_bytes as f64
+        };
         if avail < 0.10 || swap > 4.0 * GIB {
             let mut detail = format!(
                 "{} of {} available",
@@ -129,7 +134,7 @@ pub fn compute(inner: &Inner) -> CmdResult<InsightsReport> {
                 },
                 area: "Memory".into(),
                 title: if swap > 4.0 * GIB {
-                    "The Mac is swapping heavily".into()
+                    "Memory is swapping heavily".into()
                 } else {
                     "Memory is nearly full".into()
                 },
@@ -148,10 +153,7 @@ pub fn compute(inner: &Inner) -> CmdResult<InsightsReport> {
 
     // ----- disk -----
     if let Some(disks) = telemetry.disks.value() {
-        let main = disks
-            .iter()
-            .find(|d| d.mount_point == "/System/Volumes/Data")
-            .or_else(|| disks.iter().find(|d| d.mount_point == "/"));
+        let main = disks.iter().find(|d| d.primary);
         if let Some(d) = main {
             let free = d.available_bytes as f64;
             if free < 15.0 * GIB {

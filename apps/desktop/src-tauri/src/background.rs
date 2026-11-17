@@ -260,7 +260,8 @@ fn update_tray(app: &AppHandle, inner: &Inner, l: &TrayLines) {
     if let Ok(mut m) = inner.monitor.lock() {
         let t = m.sample();
         if let Some(mem) = t.memory.value() {
-            let swap = if mem.swap_used_bytes > 0 {
+            let swap = if mem.swap_used_bytes > 0 && !agasthy_system_monitor::SWAP_IS_COMMIT_CHARGE
+            {
                 format!(" · swap {}", gb(mem.swap_used_bytes))
             } else {
                 String::new()
@@ -271,12 +272,11 @@ fn update_tray(app: &AppHandle, inner: &Inner, l: &TrayLines) {
                 gb(mem.total_bytes)
             ));
         }
-        if let Some(d) = t.disks.value().and_then(|d| {
-            d.iter()
-                .find(|x| x.mount_point == "/System/Volumes/Data")
-                .or_else(|| d.iter().find(|x| x.mount_point == "/"))
-                .cloned()
-        }) {
+        if let Some(d) = t
+            .disks
+            .value()
+            .and_then(|d| d.iter().find(|x| x.primary).cloned())
+        {
             let _ = l
                 .disk
                 .set_text(format!("Disk: {} free", gb(d.available_bytes)));

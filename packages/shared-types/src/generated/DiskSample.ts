@@ -9,4 +9,9 @@ kind: string,
  * An OS-internal volume (e.g. macOS `/System/Volumes/*`) that shares space
  * with a user-visible volume. Hidden by default in the UI.
  */
-system_volume: boolean, };
+system_volume: boolean, 
+/**
+ * The volume that holds the user's files (see [`primary_disk_index`]).
+ * Exactly one disk is primary when any are listed.
+ */
+primary: boolean, };

@@ -6,6 +6,12 @@
 //! * Codex: `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`. `token_count`
 //!   events carry a running total; the last one is the session's total.
 //!
+//! * GitHub Copilot CLI: `~/.copilot/session-state/<session>/events.jsonl`
+//!   (or `$COPILOT_HOME/session-state`). `session.shutdown` events carry the
+//!   session's per-model totals (`data.modelMetrics`), cumulative across
+//!   resumes; each snapshot is counted as the change from the previous one.
+//!   A session that is still running (or was killed) has no shutdown yet.
+//!
 //! * Hermes Agent: `~/.hermes/state.db`, table `sessions`, opened read-only;
 //!   only its token and cost columns are selected (never prompts or titles).
 //!
@@ -237,6 +243,17 @@ struct FileState {
     /// Codex: model in effect and the running total last counted.
     codex_model: Option<String>,
     codex_last_total: TokenCounts,
+    /// Copilot CLI: per-model totals from the last `session.shutdown`.
+    copilot_last: HashMap<String, TokenCounts>,
+}
+
+/// Copilot CLI's data folder: `$COPILOT_HOME`, else `~/.copilot`.
+fn copilot_root(home: &Path) -> PathBuf {
+    std::env::var_os("COPILOT_HOME")
+        .filter(|h| !h.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join(".copilot"))
+        .join("session-state")
 }
 
 /// Incremental reader over the agents' session logs.
@@ -262,16 +279,18 @@ impl UsageIndex {
             files.push((p, "claude-code"))
         });
         collect_jsonl(&codex_root, 3, cutoff, &mut |p| files.push((p, "codex")));
+        collect_jsonl(&copilot_root(home), 1, cutoff, &mut |p| {
+            if p.file_name().is_some_and(|n| n == "events.jsonl") {
+                files.push((p, "copilot-cli"))
+            }
+        });
 
         let live: HashSet<&PathBuf> = files.iter().map(|(p, _)| p).collect();
         self.files.retain(|p, _| live.contains(p));
         for (path, agent) in &files {
             let st = self.files.entry(path.clone()).or_insert_with(|| FileState {
                 agent,
-                session_id: path
-                    .file_stem()
-                    .map(|s| s.to_string_lossy().into_owned())
-                    .unwrap_or_default(),
+                session_id: session_id_of(path, agent),
                 ..Default::default()
             });
             let len = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
@@ -393,6 +412,7 @@ impl UsageIndex {
             sources: vec![
                 src("claude-code", home.join(".claude/projects")),
                 src("codex", home.join(".codex/sessions")),
+                src("copilot-cli", copilot_root(home)),
             ],
             files_read: self.files.len() as u32,
             window_days,
@@ -568,10 +588,23 @@ fn read_from(path: &Path, st: &mut FileState) -> std::io::Result<()> {
         let line = String::from_utf8_lossy(&buf);
         match st.agent {
             "claude-code" => claude_line(&line, st),
+            "copilot-cli" => copilot_line(&line, st),
             _ => codex_line(&line, st),
         }
     }
     Ok(())
+}
+
+/// The file name for Claude Code and Codex; the session folder for Copilot CLI
+/// (every Copilot session file is called `events.jsonl`).
+fn session_id_of(path: &Path, agent: &str) -> String {
+    let p = if agent == "copilot-cli" {
+        path.parent().and_then(|d| d.file_name())
+    } else {
+        path.file_stem()
+    };
+    p.map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default()
 }
 
 fn ts_ms(s: &str) -> Option<i64> {
@@ -727,10 +760,147 @@ fn codex_line(line: &str, st: &mut FileState) {
     }
 }
 
+fn copilot_line(line: &str, st: &mut FileState) {
+    // Only two event types matter; the rest (messages, tool calls) are skipped unparsed.
+    let start = line.contains("\"session.start\"");
+    if !start && !line.contains("\"session.shutdown\"") {
+        return;
+    }
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+        return;
+    };
+    let ts = v.get("timestamp").and_then(|t| t.as_str());
+    match v.get("type").and_then(|t| t.as_str()) {
+        Some("session.start") => {
+            let d = v.get("data").cloned().unwrap_or_default();
+            if let Some(c) = d.pointer("/context/cwd").and_then(|c| c.as_str()) {
+                st.cwd = Some(c.to_string());
+            }
+            if let Some(id) = d.get("sessionId").and_then(|c| c.as_str()) {
+                st.session_id = id.to_string();
+            }
+            note_time(st, d.get("startTime").and_then(|t| t.as_str()).or(ts));
+        }
+        Some("session.shutdown") => {
+            let Some(metrics) = v.pointer("/data/modelMetrics").and_then(|m| m.as_object()) else {
+                return;
+            };
+            let day = note_time(st, ts);
+            for (model, m) in metrics {
+                let u = m.get("usage").cloned().unwrap_or_default();
+                let cache_read = num(&u, "cacheReadTokens");
+                let cache_write = num(&u, "cacheWriteTokens");
+                // `inputTokens` includes both cache buckets.
+                let now = TokenCounts {
+                    input: num(&u, "inputTokens").saturating_sub(cache_read + cache_write),
+                    output: num(&u, "outputTokens"),
+                    cache_write,
+                    cache_read,
+                    requests: m
+                        .pointer("/requests/count")
+                        .and_then(|c| c.as_u64())
+                        .unwrap_or(0),
+                };
+                let prev = st.copilot_last.get(model).copied().unwrap_or_default();
+                // Snapshots are cumulative; if one is smaller, treat it as a fresh total.
+                let cumulative = now.input >= prev.input
+                    && now.output >= prev.output
+                    && now.cache_read >= prev.cache_read
+                    && now.cache_write >= prev.cache_write
+                    && now.requests >= prev.requests;
+                let delta = if cumulative {
+                    TokenCounts {
+                        input: now.input - prev.input,
+                        output: now.output - prev.output,
+                        cache_write: now.cache_write - prev.cache_write,
+                        cache_read: now.cache_read - prev.cache_read,
+                        requests: now.requests - prev.requests,
+                    }
+                } else {
+                    now
+                };
+                st.copilot_last.insert(model.clone(), now);
+                if delta.total() > 0 || delta.requests > 0 {
+                    st.buckets
+                        .entry((day.clone(), model.clone()))
+                        .or_default()
+                        .add(&delta);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Write;
+
+    #[test]
+    fn copilot_cli_shutdown_totals_count_once_across_resumes() {
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join(".copilot/session-state/0a1b2c");
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("events.jsonl");
+        let shutdown = |ts: &str, input: u64, output: u64, cr: u64, cw: u64, n: u64| {
+            format!(
+                r#"{{"type":"session.shutdown","timestamp":"{ts}","data":{{"modelMetrics":{{"claude-sonnet-4.5":{{"usage":{{"inputTokens":{input},"outputTokens":{output},"cacheReadTokens":{cr},"cacheWriteTokens":{cw},"reasoningTokens":0}},"requests":{{"count":{n},"cost":1}}}}}}}}}}"#
+            )
+        };
+        let mut w = std::fs::File::create(&f).unwrap();
+        writeln!(w, r#"{{"type":"session.start","timestamp":"2026-11-15T09:00:00.000Z","data":{{"sessionId":"0a1b2c","startTime":"2026-11-15T09:00:00.000Z","context":{{"cwd":"C:\\code\\web"}}}}}}"#).unwrap();
+        writeln!(w, r#"{{"type":"user.message","timestamp":"2026-11-15T09:00:01.000Z","data":{{"content":"SECRET PROMPT TEXT"}}}}"#).unwrap();
+        writeln!(
+            w,
+            "{}",
+            shutdown("2026-11-15T10:00:00.000Z", 1000, 200, 300, 100, 2)
+        )
+        .unwrap();
+        drop(w);
+        touch_recent(&f);
+        let mut idx = UsageIndex::new();
+        let r = idx.refresh(home.path(), 30, NOW);
+        let s = &r.sessions[0];
+        assert_eq!(s.agent, "copilot-cli");
+        assert_eq!(s.session_id, "0a1b2c");
+        assert_eq!(s.cwd.as_deref(), Some("C:\\code\\web"));
+        assert_eq!(
+            s.tokens,
+            TokenCounts {
+                input: 600,
+                output: 200,
+                cache_read: 300,
+                cache_write: 100,
+                requests: 2
+            }
+        );
+        // Resumed the next day: the new shutdown is cumulative; only the change is added.
+        let mut w = std::fs::File::options().append(true).open(&f).unwrap();
+        writeln!(
+            w,
+            "{}",
+            shutdown("2026-11-16T10:00:00.000Z", 1500, 300, 400, 100, 3)
+        )
+        .unwrap();
+        drop(w);
+        touch_recent(&f);
+        let r = idx.refresh(home.path(), 30, NOW);
+        assert_eq!(r.sessions[0].tokens.total(), 1800);
+        assert_eq!(r.sessions[0].tokens.requests, 3);
+        let days: Vec<_> = r
+            .days
+            .iter()
+            .map(|d| (d.day.as_str(), d.tokens.total()))
+            .collect();
+        assert_eq!(days, [("2026-11-15", 1200), ("2026-11-16", 600)]);
+        assert!(!format!("{r:?}").contains("SECRET"));
+        assert!(
+            r.sources
+                .iter()
+                .any(|s| s.agent == "copilot-cli" && s.found)
+        );
+    }
 
     const NOW: i64 = 1_794_800_000_000; // 2026-11-16
 

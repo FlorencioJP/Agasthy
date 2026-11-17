@@ -69,6 +69,51 @@ pub struct DiskSample {
     /// An OS-internal volume (e.g. macOS `/System/Volumes/*`) that shares space
     /// with a user-visible volume. Hidden by default in the UI.
     pub system_volume: bool,
+    /// The volume that holds the user's files (see [`primary_disk_index`]).
+    /// Exactly one disk is primary when any are listed.
+    pub primary: bool,
+}
+
+/// On Windows, sysinfo's "swap" is the commit charge beyond physical RAM
+/// (`CommitTotal - PhysicalTotal`), not page-file activity. Several GB is normal
+/// on a healthy machine, so it must not be read as "swapping".
+pub const SWAP_IS_COMMIT_CHARGE: bool = cfg!(windows);
+
+/// Which disk holds the user's files: the macOS data volume if present, else
+/// the disk whose mount point is the longest prefix of the home folder
+/// (`C:\` on Windows, `/home` or `/` on Linux), else `/`, else the first
+/// non-system volume.
+pub fn primary_disk_index(disks: &[DiskSample], home: Option<&str>) -> Option<usize> {
+    if let Some(i) = disks
+        .iter()
+        .position(|d| d.mount_point == "/System/Volumes/Data")
+    {
+        return Some(i);
+    }
+    let norm = |s: &str| s.replace('\\', "/").to_ascii_lowercase();
+    if let Some(home) = home.map(norm) {
+        let best = disks
+            .iter()
+            .enumerate()
+            .filter(|(_, d)| {
+                let m = norm(&d.mount_point);
+                let m = m.trim_end_matches('/');
+                home == m || home.starts_with(&format!("{m}/"))
+            })
+            .max_by_key(|(_, d)| d.mount_point.len());
+        if let Some((i, _)) = best {
+            return Some(i);
+        }
+    }
+    disks
+        .iter()
+        .position(|d| d.mount_point == "/")
+        .or_else(|| disks.iter().position(|d| !d.system_volume))
+}
+
+fn home_from_env() -> Option<String> {
+    let var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+    std::env::var(var).ok().filter(|h| !h.is_empty())
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -195,6 +240,7 @@ impl Monitor {
                         DiskSample {
                             name: disk.name().to_string_lossy().to_string(),
                             system_volume: is_system_volume(&mount),
+                            primary: false,
                             mount_point: mount,
                             file_system: disk.file_system().to_string_lossy().to_string(),
                             total_bytes: disk.total_space(),
@@ -210,6 +256,9 @@ impl Monitor {
                     })
                     .collect();
                 v.sort_by(|a, b| a.mount_point.cmp(&b.mount_point));
+                if let Some(i) = primary_disk_index(&v, home_from_env().as_deref()) {
+                    v[i].primary = true;
+                }
                 if v.is_empty() {
                     Availability::unavailable("the operating system reported no disks")
                 } else {
@@ -299,6 +348,39 @@ fn is_system_volume(mount: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn disk(mount: &str) -> DiskSample {
+        DiskSample {
+            name: mount.into(),
+            mount_point: mount.into(),
+            file_system: "x".into(),
+            total_bytes: 1,
+            available_bytes: 1,
+            removable: false,
+            read_only: false,
+            kind: "ssd".into(),
+            system_volume: is_system_volume(mount),
+            primary: false,
+        }
+    }
+
+    #[test]
+    fn primary_disk_is_the_one_holding_home() {
+        let mac = [
+            disk("/"),
+            disk("/System/Volumes/Data"),
+            disk("/System/Volumes/VM"),
+        ];
+        assert_eq!(primary_disk_index(&mac, Some("/Users/a")), Some(1));
+        let win = [disk("C:\\"), disk("D:\\")];
+        assert_eq!(primary_disk_index(&win, Some("C:\\Users\\a")), Some(0));
+        assert_eq!(primary_disk_index(&win, Some("d:\\Users\\a")), Some(1));
+        assert_eq!(primary_disk_index(&win, None), Some(0));
+        let linux = [disk("/"), disk("/boot"), disk("/home")];
+        assert_eq!(primary_disk_index(&linux, Some("/home/a")), Some(2));
+        assert_eq!(primary_disk_index(&linux, Some("/root")), Some(0));
+        assert_eq!(primary_disk_index(&[], Some("/home/a")), None);
+    }
 
     #[test]
     fn first_cpu_sample_is_unavailable_not_zero() {

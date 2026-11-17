@@ -5,7 +5,7 @@ import { useState } from "react";
 import { formatTokens, formatUsd, shortenHome } from "../lib/format";
 import { Panel } from "./page";
 
-const AGENT_NAME: Record<string, string> = { "claude-code": "Claude Code", codex: "Codex", hermes: "Hermes Agent" };
+const AGENT_NAME: Record<string, string> = { "claude-code": "Claude Code", codex: "Codex", "copilot-cli": "GitHub Copilot CLI", hermes: "Hermes Agent" };
 
 export const totalTokens = (t: TokenCounts) => t.input + t.output + t.cache_write + t.cache_read;
 
@@ -61,7 +61,7 @@ export function UsagePanel({ report, loading, error }: { report?: UsageReport; l
       <Panel title="Token usage">
         <div className="p-1 text-[12.5px] text-muted">
           No agent usage in the last {report.window_days} days.{" "}
-          {found.length ? `Looked in ${found.map((s) => shortenHome(s.path)).join(", ")}.` : "No Claude Code, Codex or Hermes logs were found."}
+          {found.length ? `Looked in ${found.map((s) => shortenHome(s.path)).join(", ")}.` : "No Claude Code, Codex, GitHub Copilot CLI or Hermes logs were found. Copilot in VS Code is not read yet."}
         </div>
       </Panel>
     );

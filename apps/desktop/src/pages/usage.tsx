@@ -9,7 +9,7 @@ import { formatRelative, formatTokens, formatUsd, shortenHome } from "../lib/for
 import { api, errorMessage } from "../lib/ipc";
 
 const RANGES = [7, 30, 90] as const;
-const AGENT_NAME: Record<string, string> = { "claude-code": "Claude Code", codex: "Codex", hermes: "Hermes Agent" };
+const AGENT_NAME: Record<string, string> = { "claude-code": "Claude Code", codex: "Codex", "copilot-cli": "GitHub Copilot CLI", hermes: "Hermes Agent" };
 
 export function UsagePage() {
   const [days, setDays] = useState<(typeof RANGES)[number]>(30);
