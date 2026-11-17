@@ -117,7 +117,7 @@ Or by hand:
 
 Run it. Windows says "Windows protected your PC" because the installer is not code-signed yet: **More info → Run anyway**. Then scan your code folder.
 
-Using a coding agent? Also get [⬇ the CLI](https://github.com/HMAKT99/Agasthy/releases/latest/download/agasthy-cli-windows-x86_64.zip) (Claude Code, Cursor, Codex; unzip it and put `agasthy.exe` on your PATH) or [⬇ the Claude Desktop extension](https://github.com/HMAKT99/Agasthy/releases/latest/download/agasthy-mcp-0.1.5.mcpb) (double-click it).
+Using a coding agent? Also get [⬇ the CLI](https://github.com/HMAKT99/Agasthy/releases/latest/download/agasthy-cli-windows-x86_64.zip) (Claude Code, Cursor, Codex; unzip it and put `agasthy.exe` on your PATH) or [⬇ the Claude Desktop extension](https://github.com/HMAKT99/Agasthy/releases/download/v0.1.5/agasthy-mcp-0.1.5.mcpb) (double-click it).
 
 **Linux (x64, preview)**
 
